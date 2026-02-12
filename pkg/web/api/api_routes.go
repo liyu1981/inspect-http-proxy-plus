@@ -69,6 +69,13 @@ func (h *ApiHandler) RegisterRoutes(mux *http.ServeMux) {
 
 	// HttpReq
 	mux.HandleFunc("/api/httpreq", h.handleHttpReq)
+
+	// Bookmarks
+	mux.HandleFunc("POST /api/bookmarks/{session_id}", h.handleCreateBookmark)
+	mux.HandleFunc("GET /api/bookmarks", h.handleGetBookmarks)
+	mux.HandleFunc("GET /api/bookmarks/{id}", h.handleGetBookmark)
+	mux.HandleFunc("DELETE /api/bookmarks/{id}", h.handleDeleteBookmark)
+	mux.HandleFunc("PATCH /api/bookmarks/{id}", h.handleUpdateBookmark)
 }
 
 // handleHealth returns the health status of the API

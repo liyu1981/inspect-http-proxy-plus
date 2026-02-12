@@ -2,7 +2,14 @@
 
 import { format } from "date-fns";
 import { useSetAtom } from "jotai";
-import { Check, Clock, Copy, Send } from "lucide-react";
+import {
+  Bookmark,
+  BookmarkCheck,
+  Check,
+  Clock,
+  Copy,
+  Send,
+} from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { useGlobal } from "@/app/_components/global-app-context";
@@ -16,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { fetcher } from "@/lib/api";
+import { api, fetcher } from "@/lib/api";
 import { copyToClipboard, generateCurlCommand } from "@/lib/curl-gen-util";
 import type { SessionDetailResponse } from "@/types";
 import { resetRequestAtom } from "../../_jotai/http-req";
@@ -24,6 +31,11 @@ import { BodySection } from "./body-section";
 import { useConfig } from "./config-provider";
 import { HeadersSection } from "./headers-section";
 import { StatusBadge } from "./status-badge";
+
+const createBookmark = async (sessionId: string) => {
+  const res = await api.post(`/api/bookmarks/${sessionId}`);
+  return res.data;
+};
 
 interface SessionDetailsProps {
   id: string;
@@ -34,6 +46,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
   const { allConfigs } = useGlobal();
   const [copied, setCopied] = useState(false);
   const [copiedToBuilder, setCopiedToBuilder] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
   const resetRequest = useSetAtom(resetRequestAtom);
 
   const selectedConfig = allConfigs.find(
@@ -47,9 +60,20 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     `/api/sessions/${id}`,
     fetcher,
     {
-      refreshInterval: 1000, // Poll while looking at details
+      revalidateOnFocus: false,
     },
   );
+
+  const handleBookmark = async () => {
+    if (!data) return;
+    try {
+      await createBookmark(id);
+      setBookmarked(true);
+      setTimeout(() => setBookmarked(false), 2000);
+    } catch (err) {
+      console.error("Failed to bookmark session", err);
+    }
+  };
 
   const handleCopyCurl = async () => {
     if (!data) return;
@@ -176,7 +200,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
                     className="h-9 w-9"
                   >
                     {copiedToBuilder ? (
-                      <Check className="h-4 w-4" />
+                      <Send className="h-4 w-4" />
                     ) : (
                       <Send className="h-4 w-4" />
                     )}
@@ -188,6 +212,26 @@ export function SessionDetails({ id }: SessionDetailsProps) {
                       ? "Loaded to Builder!"
                       : "Copy to HTTP Request Builder"}
                   </p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleBookmark}
+                    className="h-9 w-9"
+                  >
+                    {bookmarked ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Bookmark className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{bookmarked ? "Saved!" : "Save for notes"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

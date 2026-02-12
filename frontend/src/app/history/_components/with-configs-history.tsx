@@ -65,18 +65,21 @@ export function WithConfigsHistory({
   const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
 
   // Build query string
-  const params = new URLSearchParams();
-  params.set("limit", limit.toString());
-  params.set("offset", offset.toString());
-  if (filterMethod) {
-    params.set("method", filterMethod);
-  }
-  if (filterStatus) {
-    params.set("status", filterStatus);
-  }
-  if (debouncedSearchQuery) {
-    params.set("q", debouncedSearchQuery);
-  }
+  const params = React.useMemo(() => {
+    const p = new URLSearchParams();
+    p.set("limit", limit.toString());
+    p.set("offset", offset.toString());
+    if (filterMethod) {
+      p.set("method", filterMethod);
+    }
+    if (filterStatus) {
+      p.set("status", filterStatus);
+    }
+    if (debouncedSearchQuery) {
+      p.set("q", debouncedSearchQuery);
+    }
+    return p;
+  }, [limit, offset, filterMethod, filterStatus, debouncedSearchQuery]);
 
   const {
     data: sessionList,
@@ -124,25 +127,36 @@ export function WithConfigsHistory({
 
   useSubscription(
     "sessions",
-    ({ session, type }: { session: ProxySessionStub; type: string }) => {
+    ({
+      session,
+      type,
+      ids,
+    }: {
+      session: ProxySessionStub;
+      type: string;
+      ids?: string[];
+    }) => {
       console.log(
         "received session update via subscription:",
         type,
-        session,
+        session || ids,
         configId,
       );
 
-      if (type !== "new_session") {
-        return;
-      }
+      if (type === "new_session" && session) {
+        if (session.ConfigID !== configId) {
+          return;
+        }
 
-      if (session.ConfigID !== configId) {
-        return;
-      }
-
-      // mergeSessions will merge and update allLoadedSessions
-      if (mergeSessions) {
-        setAllLoadedSessions((prev) => mergeSessions(prev, session));
+        // mergeSessions will merge and update allLoadedSessions
+        if (mergeSessions) {
+          setAllLoadedSessions((prev) => mergeSessions(prev, session));
+        }
+      } else if (type === "delete_session" && ids) {
+        setAllLoadedSessions((prev) => prev.filter((s) => !ids.includes(s.ID)));
+        if (selectedSessionId && ids.includes(selectedSessionId)) {
+          setSelectedSessionId(null);
+        }
       }
     },
   );
@@ -159,7 +173,7 @@ export function WithConfigsHistory({
 
   React.useEffect(() => {
     setSelectedSessionId(null);
-  }, [configId]);
+  }, []);
 
   // Check if there are more sessions to load
   const hasMore =

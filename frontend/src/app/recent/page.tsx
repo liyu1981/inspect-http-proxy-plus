@@ -91,7 +91,7 @@ function RecentPageContent() {
       <AppContainer>
         <AppHeader>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight">{headTitle}</h1>
+            <h1 className="text-xl font-bold tracking-tight text-primary">{headTitle}</h1>
           </div>
         </AppHeader>
         <NoConfigsState />
@@ -104,7 +104,7 @@ function RecentPageContent() {
       {/* Header */}
       <AppHeader>
         <div className="flex items-center gap-4 flex-1">
-          <h1 className="text-xl font-bold tracking-tight whitespace-nowrap">
+          <h1 className="text-xl font-bold tracking-tight whitespace-nowrap text-primary">
             {headTitle}
           </h1>
           <ConfigSelector

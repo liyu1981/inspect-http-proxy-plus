@@ -12,7 +12,7 @@ export default function ConfigsPage() {
     <AppContainer>
       <AppHeader>
         <div className="flex items-center justify-between w-full">
-          <h1 className="text-xl font-bold tracking-tight">Proxy Servers</h1>
+          <h1 className="text-xl font-bold tracking-tight text-primary">Proxy Servers</h1>
         </div>
       </AppHeader>
 

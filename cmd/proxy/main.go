@@ -24,9 +24,7 @@ func initFlags() {
 	// Use pflag (POSIX compliant) for seamless Viper integration
 	pflag.Bool("version", false, "Print version information")
 	pflag.String("config", "", "Path to config file (default is ./.proxy.config.toml)")
-	pflag.String("log-level", "debug", "Log level (trace, debug, info, warn, error, fatal, panic)")
 	pflag.String("db-path", "", "Path to database file")
-	pflag.String("api-addr", ":8080", "API server address")
 	pflag.StringSlice("proxy", []string{}, "Proxy configuration in format 'listen_port,target[,truncate]' (can be specified multiple times)")
 
 	pflag.Usage = func() {
@@ -63,6 +61,10 @@ func loadConfig() {
 
 	// Important: Bind flags to viper so they take precedence over config file
 	viper.BindPFlags(pflag.CommandLine)
+
+	// Support environment variables
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 }
 
 func parseProxyFlag(proxyStr string) (core.SysConfigProxyEntry, error) {
@@ -109,7 +111,7 @@ func main() {
 		return
 	}
 
-	// 1. Load the config file
+	// 1. Load the config file (bootstrap for db-path and initial settings)
 	loadConfig()
 
 	// 2. Unmarshal into typed SysConfig struct
@@ -117,6 +119,41 @@ func main() {
 	if err := viper.Unmarshal(&sysConfig); err != nil {
 		log.Fatal().Err(err).Msg("Failed to unmarshal system configuration")
 	}
+
+	// 3. Initialize database (needed for persistent settings)
+	db, err := core.InitDatabase(sysConfig.DBPath)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Database initialization failed")
+	}
+
+	// 4. Load persistent settings from DB, falling back to config file/defaults
+	sysConfig.LogLevel = core.GetSystemSetting(db, "log_level", sysConfig.LogLevel)
+	if sysConfig.LogLevel == "" {
+		sysConfig.LogLevel = "debug"
+	}
+	sysConfig.APIAddr = core.GetSystemSetting(db, "api_addr", sysConfig.APIAddr)
+	if sysConfig.APIAddr == "" {
+		sysConfig.APIAddr = ":20000"
+	}
+	
+	maxRetainStr := core.GetSystemSetting(db, "max_sessions_retain", "")
+	if maxRetainStr != "" {
+		fmt.Sscanf(maxRetainStr, "%d", &sysConfig.MaxSessionsRetain)
+	}
+	if sysConfig.MaxSessionsRetain <= 0 {
+		sysConfig.MaxSessionsRetain = 10000
+	}
+
+	// Ensure DB is seeded with current values if they are new
+	_ = core.SetSystemSetting(db, "log_level", sysConfig.LogLevel)
+	_ = core.SetSystemSetting(db, "api_addr", sysConfig.APIAddr)
+	_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
+
+	// 5. Store SysConfig in GlobalVarStore
+	core.GlobalVar.SetSysConfig(&sysConfig)
+
+	// 6. Setup logger using config
+	setupLogger(sysConfig.LogLevel)
 
 	// Override with command-line proxy flags if provided
 	proxyFlags, _ := pflag.CommandLine.GetStringSlice("proxy")
@@ -132,24 +169,12 @@ func main() {
 		}
 	}
 
-	// 3. Store SysConfig in GlobalVarStore
-	core.GlobalVar.SetSysConfig(&sysConfig)
-
-	// 4. Setup logger using config
-	setupLogger(sysConfig.LogLevel)
-
-	// 5. Validate proxy entries
+	// 7. Validate proxy entries
 	if len(sysConfig.Proxies) == 0 {
 		log.Fatal().Msg("No [[proxies]] entries found in config")
 	}
 
-	// 6. Initialize database
-	db, err := core.InitDatabase(sysConfig.DBPath)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Database initialization failed")
-	}
-
-	// 7. Initialize single shared UI server
+	// 8. Initialize single shared UI server
 	var uiServer *web.UIServer
 	if db != nil && sysConfig.APIAddr != "" {
 		uiServer = web.NewUIServer(&web.Config{
@@ -163,13 +188,18 @@ func main() {
 		}()
 	}
 
-	// 8. Loop through all proxy entries and create corresponding threads
+	// Start the reaper
+	publishFunc := func(topic string, v any) {
+		if uiServer != nil && uiServer.ApiHandler != nil {
+			uiServer.ApiHandler.Publish(topic, v)
+		}
+	}
+	reaper := core.NewMaxSessionRowsReaper(db, publishFunc)
+	reaper.Start(5 * time.Minute)
+
+	// 9. Loop through all proxy entries and create corresponding threads
 	for i, proxyEntry := range sysConfig.Proxies {
-		core.StartProxyServer(i, proxyEntry, db, func(topic string, v any) {
-			if uiServer != nil && uiServer.ApiHandler != nil {
-				uiServer.ApiHandler.Publish(topic, v)
-			}
-		})
+		core.StartProxyServer(i, proxyEntry, db, publishFunc)
 	}
 
 	// 9. Graceful shutdown handler

@@ -34,13 +34,36 @@ func InitDatabase(dbPath string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to create database directory %s: %w", dir, err)
 	}
 
-	// 2. Run migrations
+	// 2. Backup before migration if file exists
+	backupPath := dbPath + ".bak"
+	backupCreated := false
+	if _, err := os.Stat(dbPath); err == nil {
+		log.Info().Str("path", dbPath).Str("backup", backupPath).Msg("Creating database backup before migration...")
+		if err := CopyFile(dbPath, backupPath); err != nil {
+			return nil, fmt.Errorf("failed to create database backup: %w", err)
+		}
+		backupCreated = true
+	}
+
+	// 3. Run migrations
 	log.Info().Str("path", dbPath).Msg("Running database migrations...")
 	if err := migrations.RunMigrations(dbPath); err != nil {
+		if backupCreated {
+			log.Error().Str("backup_path", backupPath).Msg("Migration failed. A backup is available at the backup_path.")
+		}
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
-	// 3. Open GORM connection
+	// Migration succeeded, remove backup
+	if backupCreated {
+		if err := os.Remove(backupPath); err != nil {
+			log.Warn().Err(err).Str("path", backupPath).Msg("Failed to remove backup file after successful migration")
+		} else {
+			log.Debug().Str("path", backupPath).Msg("Backup file removed after successful migration")
+		}
+	}
+
+	// 4. Open GORM connection
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
@@ -61,4 +84,11 @@ func InitDatabase(dbPath string) (*gorm.DB, error) {
 
 	log.Info().Str("db_path", dbPath).Msg("Database initialized successfully")
 	return db, nil
+}
+
+func GetCurrentDBSize(dbPath string) (int64, error) {
+	if dbPath == "" {
+		dbPath = DefaultDbPath()
+	}
+	return GetFileSize(dbPath)
 }

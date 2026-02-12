@@ -1,12 +1,18 @@
 package core
 
 import (
+	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
+
+func IsDev() bool {
+	return os.Getenv("APP_ENV") == "development"
+}
 
 // copyHeaders performs a deep copy of headers from src to dst
 func copyHeaders(src, dst http.Header) {
@@ -114,4 +120,35 @@ func singleJoiningSlash(a, b string) string {
 	default:
 		return a + b
 	}
+}
+
+// GetFileSize returns the size of the file at the given path in bytes
+func GetFileSize(path string) (int64, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return fi.Size(), nil
+}
+
+// CopyFile copies a file from src to dst
+func CopyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	return destFile.Sync()
 }

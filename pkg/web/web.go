@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io/fs"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -87,7 +86,7 @@ func (s *UIServer) SetupRoutes() http.Handler {
 	s.ApiHandler.RegisterRoutes(mux)
 
 	// Debug: Print embedded files (only in debug mode)
-	if os.Getenv("DEBUG") != "" {
+	if core.IsDev() {
 		files, err := getFSAllFilenames(s.staticFS)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to list embedded files")
@@ -179,13 +178,17 @@ func loggingMiddleware(next http.Handler) http.Handler {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		// Only enable CORS in development/debug mode
+		if core.IsDev() {
+			log.Debug().Str("origin", r.Header.Get("Origin")).Msg("Applying CORS headers for development")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)

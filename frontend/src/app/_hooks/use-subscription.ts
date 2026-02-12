@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useWebSocketContext } from "../_components/websocket-provider";
 
 export const useSubscription = <T>(
@@ -7,12 +7,24 @@ export const useSubscription = <T>(
 ) => {
   const { subscribe, unsubscribe, readyState } = useWebSocketContext();
 
+  // Use a ref to store the latest onMessage callback
+  // This allows us to use the latest callback without triggering the useEffect
+  const onMessageRef = useRef(onMessage);
+
   useEffect(() => {
-    subscribe(topic, onMessage);
-    return () => {
-      unsubscribe(topic, onMessage);
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
+  useEffect(() => {
+    const handler = (data: T) => {
+      onMessageRef.current(data);
     };
-  }, [topic, onMessage, subscribe, unsubscribe]);
+
+    subscribe(topic, handler);
+    return () => {
+      unsubscribe(topic, handler);
+    };
+  }, [topic, subscribe, unsubscribe]);
 
   return { readyState };
 };

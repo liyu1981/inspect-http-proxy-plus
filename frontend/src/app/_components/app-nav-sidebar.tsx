@@ -90,12 +90,14 @@ export function AppNavSidebar() {
       className={cn(
         "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
         isPanelOpen
-          ? "bg-primary text-primary-foreground"
+          ? "bg-transparent text-primary"
           : "hover:bg-muted text-muted-foreground hover:text-foreground",
         !navExpanded && "justify-center",
       )}
     >
-      <PanelBottom className="h-5 w-5 flex-shrink-0" />
+      <PanelBottom
+        className={cn("h-5 w-5 flex-shrink-0", isPanelOpen && "text-primary")}
+      />
       {navExpanded && (
         <span className="text-sm font-medium">
           {isPanelOpen ? "Close Bottom Panels" : "Open Bottom Panels"}
@@ -116,7 +118,7 @@ export function AppNavSidebar() {
         {navExpanded && (
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm">{navTitle}</span>
+            <span className="font-semibold text-sm text-primary">{navTitle}</span>
           </div>
         )}
         <Button
@@ -145,12 +147,17 @@ export function AppNavSidebar() {
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
                 activeMenu === item.id
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-transparent text-primary"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground",
                 !navExpanded && "justify-center",
               )}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <Icon
+                className={cn(
+                  "h-5 w-5 flex-shrink-0",
+                  activeMenu === item.id && "text-primary",
+                )}
+              />
               {navExpanded && (
                 <span className="text-sm font-medium">{item.label}</span>
               )}
@@ -179,12 +186,17 @@ export function AppNavSidebar() {
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors mb-1",
                 activeMenu === item.id
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-transparent text-primary"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground",
                 !navExpanded && "justify-center",
               )}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <Icon
+                className={cn(
+                  "h-5 w-5 flex-shrink-0",
+                  activeMenu === item.id && "text-primary",
+                )}
+              />
               {navExpanded && (
                 <span className="text-sm font-medium">{item.label}</span>
               )}

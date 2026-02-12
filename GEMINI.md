@@ -1,3 +1,7 @@
 - No need do identify the build script or verify the frontend build step
 - Skip the identify build step with golang
 - In golang, do not use interface{}, use any instead
+- ResizablePanel should use percentage strings for defaultSize/minSize/maxSize, e.g., defaultSize={"40%"}
+- run migration tool as: `go run --tags fts5 ./cmd/migrate/main.go <flags>`
+- run proxy as `go run --tags fts5 ./cmd/proxy/main.go <flags>`
+- When need start the golang proxy server, ask user to do it

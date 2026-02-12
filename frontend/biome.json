@@ -68,6 +68,11 @@
     },
     "globals": []
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     {
       "includes": ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],

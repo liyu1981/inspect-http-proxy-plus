@@ -5,30 +5,56 @@ import (
 	"net/http"
 
 	"github.com/liyu1981/inspect-http-proxy/pkg/core"
+	"github.com/spf13/viper"
 )
 
-// handleSysConfig returns the system configuration
+// handleSysConfig returns or updates the system configuration
 func (h *ApiHandler) handleSysConfig(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if r.Method == http.MethodGet {
+		// Get system config from GlobalVarStore
+		sysConfig := core.GlobalVar.GetSysConfig()
+		if sysConfig == nil {
+			http.Error(w, "System configuration not available", http.StatusNotFound)
+			return
+		}
+
+		dbSize, _ := core.GetCurrentDBSize(sysConfig.DBPath)
+
+		response := map[string]any{
+			"log_level":           sysConfig.LogLevel,
+			"db_path":             sysConfig.DBPath,
+			"api_addr":            sysConfig.APIAddr,
+			"max_sessions_retain": sysConfig.MaxSessionsRetain,
+			"db_size":             dbSize,
+			"config_file":         viper.ConfigFileUsed(),
+			"proxies":             sysConfig.Proxies,
+		}
+
+		writeJSON(w, http.StatusOK, response)
 		return
 	}
 
-	// Get system config from GlobalVarStore
-	sysConfig := core.GlobalVar.GetSysConfig()
-	if sysConfig == nil {
-		http.Error(w, "System configuration not available", http.StatusNotFound)
+	if r.Method == http.MethodPost {
+		var updates map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		for k, v := range updates {
+			if k == "log_level" || k == "api_addr" || k == "max_sessions_retain" {
+				if err := core.SetSystemSetting(h.db, k, v); err != nil {
+					writeError(w, http.StatusInternalServerError, "Failed to save setting: "+k, err)
+					return
+				}
+			}
+		}
+
+		writeJSON(w, http.StatusOK, map[string]string{"status": "success", "message": "Settings saved. Changes will take effect after restart."})
 		return
 	}
 
-	response := map[string]any{
-		"log_level": sysConfig.LogLevel,
-		"db_path":   sysConfig.DBPath,
-		"api_addr":  sysConfig.APIAddr,
-		"proxies":   sysConfig.Proxies,
-	}
-
-	writeJSON(w, http.StatusOK, response)
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
 // handleCurrentConfigs returns the currently active proxy configurations

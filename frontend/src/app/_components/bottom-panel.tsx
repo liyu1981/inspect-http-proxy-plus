@@ -92,7 +92,7 @@ export function BottomPanel({
       style={{ height: `${panelHeight}px` }}
     >
       {/* Resize Handle */}
-      {/** biome-ignore lint/a11y/noStaticElementInteractions: resize handle */}
+      {/** biome-ignore lint/a11y/noStaticElementInteractions: resize handler */}
       <div
         className="h-1 bg-border hover:bg-primary cursor-ns-resize transition-colors flex-shrink-0"
         onMouseDown={() => setIsResizing(true)}

@@ -1,1 +1,1 @@
-air .
+APP_ENV=development air .

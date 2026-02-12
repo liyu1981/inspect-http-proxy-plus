@@ -75,3 +75,46 @@ export interface SessionDetailResponse {
 export interface MethodStats {
   stats: Record<string, number>;
 }
+
+export interface ProxyBookmark {
+  ID: string;
+  SessionID: string;
+  CreatedAt: string;
+  Note: string;
+  Tags: string;
+
+  // Fields copied from ProxySession
+  Timestamp: string;
+  DurationMs: number;
+  ClientAddr: string;
+  ClientIP: string;
+  RequestMethod: string;
+  RequestPath: string;
+  RequestQuery: string;
+  RequestProto: string;
+  RequestHost: string;
+  RequestURLFull: string;
+  RequestHeaders: any;
+  QueryParameters: any;
+  RequestBody: string;
+  RequestBodySize: number;
+  RequestContentType: string;
+  RequestContentEncoding: string;
+  ResponseStatusCode: number;
+  ResponseStatusText: string;
+  ResponseHeaders: any;
+  ResponseBody: string;
+  ResponseBodySize: number;
+  ResponseContentType: string;
+  ResponseContentEncoding: string;
+  ConfigID: string;
+  ConfigSourcePath: string;
+  ConfigJSON: string;
+}
+
+export interface BookmarkListResponse {
+  bookmarks: ProxyBookmark[];
+  total: number;
+  limit: number;
+  offset: number;
+}

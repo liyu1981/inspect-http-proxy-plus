@@ -86,6 +86,8 @@ type ProxySessionStub struct {
 	RequestPath        string
 	Timestamp          time.Time
 	DurationMs         int64
+	Note               string
+	Tags               string
 }
 
 // ============================================================
