@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/liyu1981/inspect-http-proxy/pkg/core"
 )
@@ -17,7 +19,30 @@ func (h *ApiHandler) handleRecentSessions(w http.ResponseWriter, r *http.Request
 	limit := getIntParam(r, "limit", 20)
 	offset := getIntParam(r, "offset", 0)
 
-	sessions, err := core.GetRecentSessions(h.db, configID, limit, offset)
+	var since time.Time
+	sinceStr := r.URL.Query().Get("since")
+	if sinceStr != "" {
+		// Try RFC3339
+		t, err := time.Parse(time.RFC3339, sinceStr)
+		if err != nil {
+			// Try Unix milliseconds
+			ms, err2 := strconv.ParseInt(sinceStr, 10, 64)
+			if err2 == nil {
+				t = time.UnixMilli(ms)
+				err = nil
+			}
+		}
+		if err == nil {
+			since = t
+		}
+	}
+
+	// If since is provided and limit is not explicitly set in the query, default limit to 0 (fetch all)
+	if sinceStr != "" && r.URL.Query().Get("limit") == "" {
+		limit = 0
+	}
+
+	sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, since)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
 		return
@@ -242,7 +267,7 @@ func (h *ApiHandler) handleSearchSessions(w http.ResponseWriter, r *http.Request
 
 	if query == "" {
 		// Fallback to recent sessions if query is empty
-		sessions, err := core.GetRecentSessions(h.db, configID, limit, offset)
+		sessions, err := core.GetRecentSessions(h.db, configID, limit, offset, time.Time{})
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
 			return

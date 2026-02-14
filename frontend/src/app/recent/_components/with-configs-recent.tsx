@@ -13,15 +13,6 @@ import { EmptySessionState } from "../../history/_components/empty-session-state
 import { SessionDetails } from "../../history/_components/session-details";
 import { SessionList } from "../../history/_components/session-list";
 
-export function getCacheKey(
-  persistKey: string | null | undefined,
-  configId: string,
-) {
-  return persistKey && configId
-    ? `sessions_cache_${persistKey}_${configId}`
-    : null;
-}
-
 interface WithConfigsRecentProps {
   configId: string;
   searchQuery: string;
@@ -38,7 +29,6 @@ interface WithConfigsRecentProps {
     prev: ProxySessionStub[],
     session: ProxySessionStub,
   ) => ProxySessionStub[];
-  persistKey?: string;
 }
 
 export function WithConfigsRecent({
@@ -51,7 +41,6 @@ export function WithConfigsRecent({
   onFilterStatusChange,
   initLoadSessions,
   mergeSessions,
-  persistKey,
 }: WithConfigsRecentProps) {
   const [selectedSessionId, setSelectedSessionId] = React.useState<
     string | null
@@ -65,14 +54,6 @@ export function WithConfigsRecent({
   const [allLoadedSessions, setAllLoadedSessions] = React.useState<
     ProxySessionStub[]
   >([]);
-
-  // If with cache then persist to localStorage when sessions change
-  const cacheKey = getCacheKey(persistKey, configId);
-  React.useEffect(() => {
-    if (cacheKey && allLoadedSessions.length > 0) {
-      localStorage.setItem(cacheKey, JSON.stringify(allLoadedSessions));
-    }
-  }, [allLoadedSessions, cacheKey]);
 
   const [offset, setOffset] = React.useState<number>(0);
   const [limit] = React.useState<number>(50);
@@ -100,7 +81,9 @@ export function WithConfigsRecent({
 
   React.useEffect(() => {
     if (initLoadSessions) {
-      initLoadSessions(configId, params).then(setSessionList);
+      initLoadSessions(configId, params).then((res) => {
+        setSessionList(res);
+      });
     }
   }, [configId, initLoadSessions, params]);
 

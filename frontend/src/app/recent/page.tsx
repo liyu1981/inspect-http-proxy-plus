@@ -3,7 +3,6 @@
 import { format } from "date-fns";
 import { ArrowLeftFromLine, Ban } from "lucide-react";
 import * as React from "react";
-import { start } from "repl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { fetcher } from "@/lib/api";
 import type { ProxySessionStub } from "@/types";
 import { AppContainer } from "../_components/app-container";
 import { AppHeader } from "../_components/app-header";
@@ -21,42 +21,39 @@ import {
 } from "../history/_components/config-provider";
 import { ConfigSelector } from "../history/_components/config-selector";
 import { NoConfigsState } from "../history/_components/no-configs-state";
-import {
-  getCacheKey,
-  WithConfigsRecent,
-} from "./_components/with-configs-recent";
+import { WithConfigsRecent } from "./_components/with-configs-recent";
 
 function RecentPageContent() {
   const { allConfigs } = useGlobal();
   const { selectedConfigId, setSelectedConfigId } = useConfig();
-  const [startTime, setStartTime] = React.useState<number>(Date.now());
+  const [startTime, setStartTime] = React.useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("recent_start_time");
+      return saved ? Number.parseInt(saved) : Date.now();
+    }
+    return Date.now();
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("recent_start_time", startTime.toString());
+  }, [startTime]);
 
   // Filter and Search States
   const [filterMethod, setFilterMethod] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState("");
 
-  const persistKey = "recent";
-
   const initLoadSessions = React.useCallback(
-    async (configId: string, _params: URLSearchParams) => {
-      const cacheKey = getCacheKey(persistKey, configId);
-      let sessions: ProxySessionStub[] = [];
-      if (cacheKey) {
-        const saved = localStorage.getItem(cacheKey);
-        if (saved) {
-          try {
-            sessions = JSON.parse(saved);
-          } catch (e) {
-            console.error("Failed to parse saved sessions", e);
-          }
-        }
-      }
-      return {
-        count: sessions.length,
-        sessions,
-      };
+    async (configId: string, params: URLSearchParams) => {
+      const startTimeIso = new Date(startTime).toISOString();
+      // Keep existing filters from params
+      const queryParams = new URLSearchParams(params);
+      queryParams.set("since", startTimeIso);
+
+      const url = `/api/sessions/recent/${configId}?${queryParams.toString()}`;
+      const res = await fetcher(url);
+      return res;
     },
-    [],
+    [startTime],
   );
 
   const mergeSessions = React.useCallback(
@@ -76,12 +73,6 @@ function RecentPageContent() {
   const headTitle = "Recent Traffic";
 
   const handleResetStartTime = () => {
-    // reset the localstorage value to clear the cache for the current recording
-    const cacheKey = getCacheKey(persistKey, selectedConfigId);
-    if (cacheKey) {
-      localStorage.setItem(cacheKey, "[]");
-    }
-
     setStartTime(Date.now());
   };
 
@@ -142,7 +133,6 @@ function RecentPageContent() {
           onFilterStatusChange={setFilterStatus}
           initLoadSessions={initLoadSessions}
           mergeSessions={mergeSessions}
-          persistKey={persistKey}
         />
       </div>
     </AppContainer>
