@@ -22,12 +22,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { api, fetcher } from "@/lib/api";
 import { copyToClipboard, generateCurlCommand } from "@/lib/curl-gen-util";
 import type { SessionDetailResponse } from "@/types";
+import { FloatToolbar } from "../../_components/float-toolbar";
 import { resetRequestAtom } from "../../_jotai/http-req";
 import { BodySection } from "./body-section";
 import { useConfig } from "./config-provider";
@@ -169,76 +169,71 @@ export function SessionDetails({ id }: SessionDetailsProps) {
       </div>
 
       <div className="relative">
-        {/* Floating Toolbar */}
-        <div className="absolute top-8 right-0 z-10 flex gap-2 bg-primary/10 p-1 border rounded-md rounded-r-none shadow-md">
-          <div className="flex flex-col space-y-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyCurl}
-                    className="h-9 w-9"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
-                </TooltipContent>
-              </Tooltip>
+        <FloatToolbar top="top-8">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyCurl}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
+            </TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyToHttpReq}
-                    className="h-9 w-9"
-                  >
-                    {copiedToBuilder ? (
-                      <Send className="h-4 w-4" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>
-                    {copiedToBuilder
-                      ? "Loaded to Builder!"
-                      : "Copy to HTTP Request Builder"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyToHttpReq}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copiedToBuilder ? (
+                  <Send className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>
+                {copiedToBuilder
+                  ? "Loaded to Builder!"
+                  : "Copy to HTTP Request Builder"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleBookmark}
-                    className="h-9 w-9"
-                  >
-                    {bookmarked ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Bookmark className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>{bookmarked ? "Saved!" : "Save for notes"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBookmark}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {bookmarked ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Bookmark className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{bookmarked ? "Saved!" : "Save for notes"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </FloatToolbar>
       </div>
 
       <div className="p-6 pt-4 ">

@@ -28,12 +28,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { api, fetcher } from "@/lib/api";
 import { copyToClipboard, generateCurlCommand } from "@/lib/curl-gen-util";
 import type { ProxyBookmark } from "@/types";
+import { FloatToolbar } from "../../_components/float-toolbar";
 import { TagInput } from "../../_components/tag-input";
 import { useSubscription } from "../../_hooks/use-subscription";
 import { resetRequestAtom } from "../../_jotai/http-req";
@@ -233,58 +233,6 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
 
   return (
     <div className="h-full flex flex-col relative">
-      <div className="relative">
-        <div className="absolute top-24 right-0 z-10 flex gap-2 bg-primary/10 p-1 border rounded-md rounded-r-none shadow-md">
-          <div className="flex flex-col space-y-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyCurl}
-                    className="h-9 w-9"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyToHttpReq}
-                    className="h-9 w-9"
-                  >
-                    {copiedToBuilder ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>
-                    {copiedToBuilder
-                      ? "Loaded to Builder!"
-                      : "Copy to HTTP Request Builder"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-      </div>
-
       <div className="p-4 bg-background shadow-sm border-b shrink-0">
         <div className="flex items-start justify-between mb-[5px]">
           <div>
@@ -311,6 +259,54 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
             <Badge variant="outline">{bookmark.RequestProto}</Badge>
           </div>
         </div>
+      </div>
+
+      <div className="relative">
+        <FloatToolbar top="top-24">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyCurl}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyToHttpReq}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copiedToBuilder ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>
+                {copiedToBuilder
+                  ? "Loaded to Builder!"
+                  : "Copy to HTTP Request Builder"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </FloatToolbar>
       </div>
 
       <div className="flex-1 relative flex flex-col overflow-hidden h-full min-h-0">
