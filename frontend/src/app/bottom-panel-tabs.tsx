@@ -30,7 +30,6 @@ export function useBottomPanelTabs() {
         ),
         icon: Globe,
         closeable: false,
-        autoCollapseTabTrigger: true,
       },
       skipSync: true, // Skip sync as fixed tabs are not stored in IndexedDB
     });

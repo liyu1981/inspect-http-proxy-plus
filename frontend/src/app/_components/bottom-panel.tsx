@@ -189,15 +189,7 @@ export function BottomPanel({
                 )}
               >
                 {Icon && <Icon className="h-4 w-4" />}
-                {tab.autoCollapseTabTrigger ? (
-                  activeTabId === tab.id ? (
-                    <span title={tab.label}>{tab.label}</span>
-                  ) : (
-                    ""
-                  )
-                ) : (
-                  <span title={tab.label}>{tab.label}</span>
-                )}
+                <span title={tab.label}>{tab.label}</span>
                 {tab.closeable !== false && (
                   <a
                     // biome-ignore lint/a11y/useValidAnchor: a is used as button

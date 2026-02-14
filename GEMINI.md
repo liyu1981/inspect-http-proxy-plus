@@ -5,3 +5,4 @@
 - run migration tool as: `go run --tags fts5 ./cmd/migrate/main.go <flags>`
 - run proxy as `go run --tags fts5 ./cmd/proxy/main.go <flags>`
 - When need start the golang proxy server, ask user to do it
+- NEVER do git commit unless the user explicitly tells you to
