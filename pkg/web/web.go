@@ -111,22 +111,27 @@ func (s *UIServer) SetupRoutes() http.Handler {
 			return
 		}
 
-		// 2. Check if the file exists exactly as requested
+		// 2. Remove trailing slash for HTML file lookup (but keep for actual directories)
+		cleanPath := strings.TrimSuffix(path, "/")
+
+		// 3. Check if the file exists exactly as requested
 		_, err := s.staticFS.Open(strings.TrimPrefix(path, "/"))
 		if err == nil {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
 
-		// 3. If not found, try appending ".html" (e.g., /inspect -> /inspect.html)
-		htmlPath := strings.TrimPrefix(path, "/") + ".html"
+		// 4. If not found, try appending ".html" to the clean path
+		htmlPath := strings.TrimPrefix(cleanPath, "/") + ".html"
 		if _, err := s.staticFS.Open(htmlPath); err == nil {
-			r.URL.Path += ".html"
-			fileServer.ServeHTTP(w, r)
+			// Create a new request with modified path but preserve query parameters
+			newReq := r.Clone(r.Context())
+			newReq.URL.Path = cleanPath + ".html"
+			fileServer.ServeHTTP(w, newReq)
 			return
 		}
 
-		// 4. Fallback: Serve the standard file server (handles 404s)
+		// 5. Fallback: Serve the standard file server (handles 404s)
 		fileServer.ServeHTTP(w, r)
 	})
 
