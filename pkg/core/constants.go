@@ -3,6 +3,7 @@ package core
 // Constants
 const (
 	MaxBodyPrintSize = 1024 * 10 // Max size if truncation is enabled
+	LogLevelDisabled = "disabled"
 )
 
 // ANSI Color Codes

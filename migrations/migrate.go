@@ -43,6 +43,12 @@ func RunMigrations(dbPath string) error {
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("migration failed: %w", err)
+	} else if err == migrate.ErrNoChange {
+		version, _, _ := m.Version()
+		fmt.Printf("\033[36mMigration:\033[0m Database is up to date (version %d)\n", version)
+	} else {
+		version, _, _ := m.Version()
+		fmt.Printf("\033[36mMigration:\033[0m Successfully migrated to version %d\n", version)
 	}
 	return nil
 }

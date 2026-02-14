@@ -36,16 +36,20 @@ type LogEntry struct {
 // ProxyConfig holds the configuration for the proxy handler
 type ProxyConfig struct {
 	ConfigID        string
+	ListenAddr      string
 	TargetURL       *url.URL
 	TruncateLogBody bool
 	DB              *gorm.DB
 	HeadersToOmit   map[string]struct{}
-	WsPublishFn   func(topic string, v any)
+	WsPublishFn     func(topic string, v any)
 }
 
 // NewProxyHandler creates a new HTTP handler for proxying requests
 func NewProxyHandler(config *ProxyConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("\n%s[Config: %s | Listen: %s | Target: %s]%s\n",
+			ColorBold+ColorGray, config.ConfigID, config.ListenAddr, config.TargetURL.String(), ColorReset)
+
 		startTime := time.Now()
 		entry := &LogEntry{
 			ConfigID:       config.ConfigID,
@@ -196,6 +200,7 @@ func NewProxyHandler(config *ProxyConfig) http.HandlerFunc {
 // SetupProxyConfig creates a ProxyConfig from viper settings
 func SetupProxyConfig(
 	configID string,
+	listenAddr string,
 	targetURL *url.URL,
 	db *gorm.DB,
 	truncateLogBody bool,
@@ -209,6 +214,7 @@ func SetupProxyConfig(
 
 	return &ProxyConfig{
 		ConfigID:        configID,
+		ListenAddr:      listenAddr,
 		TargetURL:       targetURL,
 		TruncateLogBody: viper.GetBool("truncate-log-body"),
 		DB:              db,
@@ -257,15 +263,24 @@ func StartProxyServer(
 	// Setup proxy configuration
 	proxyConfig := SetupProxyConfig(
 		configID,
+		proxyEntry.Listen,
 		targetURLParsed,
 		db,
 		proxyEntry.TruncateLogBody,
-		wsPublishFn,	)
+		wsPublishFn,
+	)
 
 	// Store ProxyConfig in GlobalVarStore's id_to_config map
 	if configID != "" {
 		GlobalVar.AddProxyConfig(configID, proxyConfig)
 	}
+
+	fmt.Printf("%sProxy server:%s  %s%s%s -> %s%s%s (ID: %s)\n",
+		ColorCyan, ColorReset,
+		ColorBold, proxyEntry.Listen, ColorReset,
+		ColorBold, proxyEntry.Target, ColorReset,
+		configID,
+	)
 
 	// Create HTTP server for this proxy entry
 	proxyServer := &http.Server{

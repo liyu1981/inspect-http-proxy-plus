@@ -3,6 +3,7 @@ package core
 // Config represents the top-level configuration structure
 type SysConfig struct {
 	LogLevel           string                `mapstructure:"log-level"`
+	LogDest            string                `mapstructure:"log-dest"`
 	DBPath             string                `mapstructure:"db-path"`
 	APIAddr            string                `mapstructure:"api-addr"`
 	MaxSessionsRetain  int                   `mapstructure:"max-sessions-retain"`

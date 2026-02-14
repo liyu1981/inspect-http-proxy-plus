@@ -83,6 +83,16 @@ func (g *GlobalVarStore) GetProxies() []SysConfigProxyEntry {
 	return nil
 }
 
+// GetLogDest returns the log destination from system config.
+func (g *GlobalVarStore) GetLogDest() string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	if g.sysConfig != nil {
+		return g.sysConfig.LogDest
+	}
+	return ""
+}
+
 // ====================
 // Config ID Methods
 // ====================

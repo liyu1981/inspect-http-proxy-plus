@@ -49,7 +49,7 @@ func main() {
 	switch *action {
 	case "up":
 		log.Println("Running migrations...")
-		if err := migrations.RunMigrations(*dbPath); err != nil {
+		if err := migrations.RunMigrations(*dbPath, false); err != nil {
 			log.Fatalf("Migration failed: %v", err)
 		}
 		log.Println("Migrations completed successfully!")

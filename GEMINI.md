@@ -2,6 +2,7 @@
 - Skip the identify build step with golang
 - In golang, do not use interface{}, use any instead
 - ResizablePanel should use percentage strings for defaultSize/minSize/maxSize, e.g., defaultSize={"40%"}
+- fmt.Printf statements are for terminal interaction and should NEVER be silenced by log level or log destination settings.
 - run migration tool as: `go run --tags fts5 ./cmd/migrate/main.go <flags>`
 - run proxy as `go run --tags fts5 ./cmd/proxy/main.go <flags>`
 - When need start the golang proxy server, ask user to do it

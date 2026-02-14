@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,6 +26,8 @@ func initFlags() {
 	pflag.Bool("version", false, "Print version information")
 	pflag.String("config", "", "Path to config file (default is ./.proxy.config.toml)")
 	pflag.String("db-path", "", "Path to database file")
+	pflag.String("log-level", "", "Log level: debug, info, warn, error, fatal, panic, disabled")
+	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
 	pflag.StringSlice("proxy", []string{}, "Proxy configuration in format 'listen_port,target[,truncate]' (can be specified multiple times)")
 
 	pflag.Usage = func() {
@@ -39,11 +42,37 @@ func initFlags() {
 	}
 }
 
+func resolveLogSettings() (string, string) {
+	level := viper.GetString("log-level")
+	dest := viper.GetString("log-dest")
+
+	if dest == "" {
+		if core.IsDev() {
+			dest = "console"
+		} else {
+			dest = "null"
+		}
+	}
+
+	if level == "" {
+		if core.IsDev() {
+			level = "debug"
+		} else {
+			level = core.LogLevelDisabled
+		}
+	}
+
+	return level, dest
+}
+
 func loadConfig() {
 	// Set default config file search parameters
 	viper.SetConfigName(".proxy.config")
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(".")
+
+	// Important: Bind flags to viper so they take precedence over config file
+	viper.BindPFlags(pflag.CommandLine)
 
 	// If a specific config file is passed via flag, use that
 	if cfg, _ := pflag.CommandLine.GetString("config"); cfg != "" {
@@ -55,12 +84,17 @@ func loadConfig() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
 		}
-	} else {
-		log.Info().Str("file", viper.ConfigFileUsed()).Msg("Configuration loaded from file")
 	}
 
-	// Important: Bind flags to viper so they take precedence over config file
-	viper.BindPFlags(pflag.CommandLine)
+	level, dest := resolveLogSettings()
+	setupLogger(level, dest)
+
+	if viper.ConfigFileUsed() != "" {
+		fmt.Printf("%sConfig file:%s %s\n", core.ColorCyan, core.ColorReset, viper.ConfigFileUsed())
+	}
+	if viper.ConfigFileUsed() != "" {
+		log.Info().Str("file", viper.ConfigFileUsed()).Msg("Configuration loaded from file")
+	}
 
 	// Support environment variables
 	viper.AutomaticEnv()
@@ -89,17 +123,51 @@ func parseProxyFlag(proxyStr string) (core.SysConfigProxyEntry, error) {
 	}, nil
 }
 
-func setupLogger(logLevel string) {
+func setupLogger(logLevel string, logDest string) {
+	if logLevel == core.LogLevelDisabled {
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+		return
+	}
 	level, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		level = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(level)
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{
-		Out:        os.Stderr,
-		TimeFormat: time.RFC3339,
-	}).With().Caller().Logger()
+	var out io.Writer
+	switch logDest {
+	case "console":
+		out = zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			TimeFormat: time.RFC3339,
+		}
+	case "null":
+		out = io.Discard
+	case "":
+		// Default case if empty string somehow gets here
+		if core.IsDev() {
+			out = zerolog.ConsoleWriter{
+				Out:        os.Stderr,
+				TimeFormat: time.RFC3339,
+			}
+		} else {
+			out = io.Discard
+		}
+	default:
+		// Assume file path
+		f, err := os.OpenFile(logDest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error opening log file %s: %v. Falling back to console.\n", logDest, err)
+			out = zerolog.ConsoleWriter{
+				Out:        os.Stderr,
+				TimeFormat: time.RFC3339,
+			}
+		} else {
+			out = f
+		}
+	}
+
+	log.Logger = log.Output(out).With().Caller().Logger()
 }
 
 func main() {
@@ -121,6 +189,7 @@ func main() {
 	}
 
 	// 3. Initialize database (needed for persistent settings)
+	// Use resolved settings from config/flags for bootstrap
 	db, err := core.InitDatabase(sysConfig.DBPath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Database initialization failed")
@@ -129,13 +198,31 @@ func main() {
 	// 4. Load persistent settings from DB, falling back to config file/defaults
 	sysConfig.LogLevel = core.GetSystemSetting(db, "log_level", sysConfig.LogLevel)
 	if sysConfig.LogLevel == "" {
-		sysConfig.LogLevel = "debug"
+		if core.IsDev() {
+			sysConfig.LogLevel = "debug"
+		} else {
+			sysConfig.LogLevel = core.LogLevelDisabled
+		}
 	}
+
+	sysConfig.LogDest = core.GetSystemSetting(db, "log_dest", sysConfig.LogDest)
+	if sysConfig.LogDest == "" {
+		if core.IsDev() {
+			sysConfig.LogDest = "console"
+		} else {
+			sysConfig.LogDest = "null"
+		}
+	}
+
+	// 5. Setup logger and global config early with final settings from DB
+	core.GlobalVar.SetSysConfig(&sysConfig)
+	setupLogger(sysConfig.LogLevel, sysConfig.LogDest)
+
 	sysConfig.APIAddr = core.GetSystemSetting(db, "api_addr", sysConfig.APIAddr)
 	if sysConfig.APIAddr == "" {
 		sysConfig.APIAddr = ":20000"
 	}
-	
+
 	maxRetainStr := core.GetSystemSetting(db, "max_sessions_retain", "")
 	if maxRetainStr != "" {
 		fmt.Sscanf(maxRetainStr, "%d", &sysConfig.MaxSessionsRetain)
@@ -146,14 +233,9 @@ func main() {
 
 	// Ensure DB is seeded with current values if they are new
 	_ = core.SetSystemSetting(db, "log_level", sysConfig.LogLevel)
+	_ = core.SetSystemSetting(db, "log_dest", sysConfig.LogDest)
 	_ = core.SetSystemSetting(db, "api_addr", sysConfig.APIAddr)
 	_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
-
-	// 5. Store SysConfig in GlobalVarStore
-	core.GlobalVar.SetSysConfig(&sysConfig)
-
-	// 6. Setup logger using config
-	setupLogger(sysConfig.LogLevel)
 
 	// Override with command-line proxy flags if provided
 	proxyFlags, _ := pflag.CommandLine.GetStringSlice("proxy")
@@ -177,6 +259,7 @@ func main() {
 	// 8. Initialize single shared UI server
 	var uiServer *web.UIServer
 	if db != nil && sysConfig.APIAddr != "" {
+		fmt.Printf("%sUI Server:%s http://%s\n", core.ColorCyan, core.ColorReset, sysConfig.APIAddr)
 		uiServer = web.NewUIServer(&web.Config{
 			DB:         db,
 			ListenAddr: sysConfig.APIAddr,

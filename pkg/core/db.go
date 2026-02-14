@@ -29,6 +29,8 @@ func InitDatabase(dbPath string) (*gorm.DB, error) {
 		dbPath = DefaultDbPath()
 	}
 
+	fmt.Printf("%sDatabase file:%s %s\n", ColorCyan, ColorReset, dbPath)
+
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create database directory %s: %w", dir, err)
