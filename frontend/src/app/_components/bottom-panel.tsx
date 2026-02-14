@@ -90,7 +90,7 @@ export function BottomPanel({
   // biome-ignore lint/correctness/useExhaustiveDependencies: necessary
   useEffect(() => {
     const container = tabsContainerRef.current;
-    if (!container) return;
+    if (!container || !isOpen) return;
 
     const checkOverflow = () => {
       setShowScrollButtons(container.scrollWidth > container.clientWidth);
@@ -102,7 +102,7 @@ export function BottomPanel({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [tabs]);
+  }, [tabs, isOpen]);
 
   // Scroll active tab into view
   useEffect(() => {
