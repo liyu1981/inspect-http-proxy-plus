@@ -9,11 +9,23 @@ export interface Header {
   enabled: boolean;
 }
 
+export type BodyType = "json" | "form-data" | "raw";
+
+export interface FormDataEntry {
+  id: string;
+  key: string;
+  value: string | File;
+  type: "text" | "file";
+  enabled: boolean;
+}
+
 export interface RequestData {
   method: string;
   url: string;
   headers: Header[];
   body: string;
+  bodyType: BodyType;
+  formDataEntries: FormDataEntry[];
   timestamp: number;
 }
 
@@ -29,6 +41,8 @@ export const DEFAULT_REQUEST: RequestData = {
     },
   ],
   body: "",
+  bodyType: "json",
+  formDataEntries: [],
   timestamp: Date.now(),
 };
 
@@ -66,6 +80,59 @@ export const requestBodyAtom = atom(
     set(requestAtom, {
       ...get(requestAtom),
       body: decodedNewBody,
+    });
+  },
+);
+
+export const requestBodyTypeAtom = atom(
+  (get) => get(requestAtom).bodyType,
+  (get, set, newType: BodyType) => {
+    const currentReq = get(requestAtom);
+    const headers = [...currentReq.headers];
+
+    let contentTypeValue = "";
+    if (newType === "json") {
+      contentTypeValue = "application/json";
+    } else if (newType === "form-data") {
+      contentTypeValue = "multipart/form-data";
+    } else if (newType === "raw") {
+      contentTypeValue = "text/plain";
+    }
+
+    if (contentTypeValue) {
+      const ctIndex = headers.findIndex(
+        (h) => h.key.toLowerCase() === "content-type",
+      );
+      if (ctIndex >= 0) {
+        headers[ctIndex] = {
+          ...headers[ctIndex],
+          value: contentTypeValue,
+          enabled: true,
+        };
+      } else {
+        headers.push({
+          id: Date.now().toString(),
+          key: "Content-Type",
+          value: contentTypeValue,
+          enabled: true,
+        });
+      }
+    }
+
+    set(requestAtom, {
+      ...currentReq,
+      bodyType: newType,
+      headers: headers,
+    });
+  },
+);
+
+export const requestFormDataEntriesAtom = atom(
+  (get) => get(requestAtom).formDataEntries,
+  (get, set, newEntries: FormDataEntry[]) => {
+    set(requestAtom, {
+      ...get(requestAtom),
+      formDataEntries: newEntries,
     });
   },
 );
@@ -117,6 +184,40 @@ export const removeHeaderAtom = atom(null, (get, set, headerId: string) => {
   );
 });
 
+export const addFormDataEntryAtom = atom(null, (get, set) => {
+  const newEntry: FormDataEntry = {
+    id: Date.now().toString(),
+    key: "",
+    value: "",
+    type: "text",
+    enabled: true,
+  };
+  set(requestFormDataEntriesAtom, [
+    ...get(requestFormDataEntriesAtom),
+    newEntry,
+  ]);
+});
+
+export const updateFormDataEntryAtom = atom(
+  null,
+  (get, set, update: { id: string; field: keyof FormDataEntry; value: any }) => {
+    const updatedEntries = get(requestFormDataEntriesAtom).map((e) =>
+      e.id === update.id ? { ...e, [update.field]: update.value } : e,
+    );
+    set(requestFormDataEntriesAtom, updatedEntries);
+  },
+);
+
+export const removeFormDataEntryAtom = atom(
+  null,
+  (get, set, entryId: string) => {
+    set(
+      requestFormDataEntriesAtom,
+      get(requestFormDataEntriesAtom).filter((e) => e.id !== entryId),
+    );
+  },
+);
+
 export const resetRequestAtom = atom(
   null,
   (get, set, defaultRequest?: Partial<RequestData>) => {
@@ -133,6 +234,14 @@ export const resetRequestAtom = atom(
         ...h,
         id: h.id || `${Date.now()}-${i}`,
       }));
+    }
+
+    if (!resetValue.formDataEntries) {
+      resetValue.formDataEntries = [];
+    }
+
+    if (!resetValue.bodyType) {
+      resetValue.bodyType = "json";
     }
 
     // Keep timestamp from defaultRequest if provided, otherwise use current time

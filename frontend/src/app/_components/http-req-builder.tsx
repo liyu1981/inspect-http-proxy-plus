@@ -1,23 +1,30 @@
 "use client";
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Loader2, Logs, Plus, Send, X } from "lucide-react"; // Added Zap/Globe for tab icons
-import { useState } from "react";
+import { FileIcon, Loader2, Logs, Plus, Send, X } from "lucide-react"; // Added Zap/Globe for tab icons
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { addTabAtom } from "../_jotai/bottom-panel-store";
 // Jotai Atoms
 import {
+  addFormDataEntryAtom,
   addHeaderAtom,
+  removeFormDataEntryAtom,
   removeHeaderAtom,
   requestAtom,
   requestBodyAtom,
+  requestBodyTypeAtom,
+  requestFormDataEntriesAtom,
   requestHeadersAtom,
   requestMethodAtom,
   requestTimestampAtom,
   requestUrlAtom,
+  updateFormDataEntryAtom,
   updateHeaderAtom,
 } from "../_jotai/http-req";
 import {
@@ -43,12 +50,17 @@ export default function HttpReqBuilder() {
   const [method, setMethod] = useAtom(requestMethodAtom);
   const [url, setUrl] = useAtom(requestUrlAtom);
   const [body, setBody] = useAtom(requestBodyAtom);
+  const [bodyType, setBodyType] = useAtom(requestBodyTypeAtom);
+  const formDataEntries = useAtomValue(requestFormDataEntriesAtom);
   const headers = useAtomValue(requestHeadersAtom);
 
   // Actions
   const addHeader = useSetAtom(addHeaderAtom);
   const updateHeader = useSetAtom(updateHeaderAtom);
   const removeHeader = useSetAtom(removeHeaderAtom);
+  const addFormDataEntry = useSetAtom(addFormDataEntryAtom);
+  const updateFormDataEntry = useSetAtom(updateFormDataEntryAtom);
+  const removeFormDataEntry = useSetAtom(removeFormDataEntryAtom);
   const addTab = useSetAtom(addTabAtom);
   const updateResponseState = useSetAtom(updateResponseStateAtom);
   const updateTimestamp = useSetAtom(requestTimestampAtom);
@@ -82,29 +94,47 @@ export default function HttpReqBuilder() {
         state: { loading: true, error: null, request: { ...currentRequest } },
       });
 
-      // 4. Prepare Payload
+      // 4. Prepare Headers
       const enabledHeaders = headers
         .filter((h) => h.enabled && h.key.trim())
         // biome-ignore lint/performance/noAccumulatingSpread: skip
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
 
-      let requestBody = body || "";
-      if (requestBody.trim()) {
-        try {
-          // Normalize JSON if applicable
-          requestBody = JSON.stringify(JSON.parse(requestBody));
-        } catch (_e) {
-          /* send raw */
-        }
-      }
+      let res: any;
 
-      // 5. Execute
-      const res = await api.post("/api/httpreq", {
-        method,
-        url,
-        headers: enabledHeaders,
-        body: requestBody,
-      });
+      if (bodyType === "form-data") {
+        // Use FormData for multipart/form-data
+        const formData = new FormData();
+        formData.append("__method", method);
+        formData.append("__url", url);
+        formData.append("__headers", JSON.stringify(enabledHeaders));
+
+        for (const entry of formDataEntries) {
+          if (entry.enabled && entry.key.trim()) {
+            formData.append(entry.key, entry.value);
+          }
+        }
+
+        res = await api.post("/api/httpreq", formData);
+      } else {
+        // Prepare JSON/Raw Payload
+        let requestBody = body || "";
+        if (bodyType === "json" && requestBody.trim()) {
+          try {
+            // Normalize JSON if applicable
+            requestBody = JSON.stringify(JSON.parse(requestBody));
+          } catch (_e) {
+            /* send raw */
+          }
+        }
+
+        res = await api.post("/api/httpreq", {
+          method,
+          url,
+          headers: enabledHeaders,
+          body: requestBody,
+        });
+      }
 
       // 6. Update the map with the successful result
       updateResponseState({
@@ -250,19 +280,165 @@ export default function HttpReqBuilder() {
           {/* Body Section */}
           <div className="flex flex-col min-h-0">
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
-              <Label className="text-sm font-medium">Body</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Body</Label>
+                <Tabs
+                  value={bodyType}
+                  onValueChange={(v) => setBodyType(v as any)}
+                  className="w-auto"
+                >
+                  <TabsList className="h-8">
+                    <TabsTrigger value="json" className="text-xs">
+                      JSON
+                    </TabsTrigger>
+                    <TabsTrigger value="form-data" className="text-xs">
+                      Form-Data
+                    </TabsTrigger>
+                    <TabsTrigger value="raw" className="text-xs">
+                      Raw
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
               <div className="flex-1 relative bg-muted/50 rounded-md border overflow-hidden min-h-[200px]">
-                <JsonEditor
-                  key={body}
-                  initialJson={body ? JSON.parse(body) : {}}
-                  rootFontSize={"13px"}
-                  onChangeJson={(newJson) => setBody(newJson)}
-                />
+                {bodyType === "json" && (
+                  <JsonEditor
+                    key={body}
+                    initialJson={body ? JSON.parse(body) : {}}
+                    rootFontSize={"13px"}
+                    onChangeJson={(newJson) => setBody(newJson)}
+                  />
+                )}
+                {bodyType === "form-data" && (
+                  <div className="p-4 space-y-4 h-full overflow-auto">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Multipart Form Data
+                      </span>
+                      <Button
+                        onClick={() => addFormDataEntry()}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Field
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {formDataEntries.map((entry) => (
+                        <FormDataEntryRow
+                          key={entry.id}
+                          entry={entry}
+                          onUpdate={updateFormDataEntry}
+                          onRemove={removeFormDataEntry}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {bodyType === "raw" && (
+                  <Textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder="Raw request body..."
+                    className="h-full w-full resize-none border-none focus-visible:ring-0 font-mono text-sm p-4 bg-transparent"
+                  />
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FormDataEntryRow({
+  entry,
+  onUpdate,
+  onRemove,
+}: {
+  entry: any;
+  onUpdate: (update: any) => void;
+  onRemove: (id: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUpdate({ id: entry.id, field: "value", value: file });
+    }
+  };
+
+  return (
+    <div className="flex gap-2 items-center">
+      <input
+        type="checkbox"
+        checked={entry.enabled}
+        onChange={(e) =>
+          onUpdate({ id: entry.id, field: "enabled", value: e.target.checked })
+        }
+        className="w-4 h-4 rounded border-gray-300"
+      />
+      <Input
+        value={entry.key}
+        onChange={(e) =>
+          onUpdate({ id: entry.id, field: "key", value: e.target.value })
+        }
+        placeholder="Key"
+        className="flex-1 font-mono text-sm h-9"
+      />
+      <div className="flex-1 flex gap-2">
+        <select
+          value={entry.type}
+          onChange={(e) =>
+            onUpdate({ id: entry.id, field: "type", value: e.target.value })
+          }
+          className="px-2 py-1 border rounded bg-background text-[10px] h-9"
+        >
+          <option value="text">Text</option>
+          <option value="file">File</option>
+        </select>
+        {entry.type === "text" ? (
+          <Input
+            value={entry.value instanceof File ? "" : entry.value}
+            onChange={(e) =>
+              onUpdate({ id: entry.id, field: "value", value: e.target.value })
+            }
+            placeholder="Value"
+            className="flex-1 font-mono text-sm h-9"
+          />
+        ) : (
+          <div className="flex-1 flex gap-2 items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 flex-1 text-xs justify-start px-2 font-normal truncate max-w-[150px]"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FileIcon className="h-3 w-3 mr-2 shrink-0" />
+              {entry.value instanceof File ? entry.value.name : "Select File"}
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
+        )}
+      </div>
+      <Button
+        onClick={() => onRemove(entry.id)}
+        variant="ghost"
+        size="sm"
+        className="h-9 w-9 p-0"
+      >
+        <X className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

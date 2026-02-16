@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 )
 
-// RequestPayload represents the incoming request from the UI
+// RequestPayload represents the incoming request from the UI when sent as JSON
 type RequestPayload struct {
 	Method  string            `json:"method"`
 	URL     string            `json:"url"`
@@ -32,19 +34,96 @@ func (h *ApiHandler) handleHttpReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request payload
-	var payload RequestPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid request payload", err)
+	var method, targetURL string
+	var headers map[string]string
+	var reqBody io.Reader
+	var contentType string
+
+	// Check content type of the request from UI
+	uiContentType := r.Header.Get("Content-Type")
+
+	if strings.HasPrefix(uiContentType, "application/json") {
+		// Parse request payload
+		var payload RequestPayload
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			writeError(w, http.StatusBadRequest, "Invalid request payload", err)
+			return
+		}
+		method = payload.Method
+		targetURL = payload.URL
+		headers = payload.Headers
+		if payload.Body != "" {
+			reqBody = bytes.NewBufferString(payload.Body)
+		}
+	} else if strings.HasPrefix(uiContentType, "multipart/form-data") {
+		// Parse multipart form (max 32MB in memory)
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			writeError(w, http.StatusBadRequest, "Failed to parse multipart form", err)
+			return
+		}
+
+		method = r.FormValue("__method")
+		targetURL = r.FormValue("__url")
+		headersJSON := r.FormValue("__headers")
+		if headersJSON != "" {
+			if err := json.Unmarshal([]byte(headersJSON), &headers); err != nil {
+				writeError(w, http.StatusBadRequest, "Invalid __headers field", err)
+				return
+			}
+		}
+
+		// Reconstruct multipart body for the target
+		bodyBuf := &bytes.Buffer{}
+		mw := multipart.NewWriter(bodyBuf)
+
+		// Copy fields (excluding our internal ones)
+		for key, values := range r.MultipartForm.Value {
+			if strings.HasPrefix(key, "__") {
+				continue
+			}
+			for _, val := range values {
+				if err := mw.WriteField(key, val); err != nil {
+					writeError(w, http.StatusInternalServerError, "Failed to write form field", err)
+					return
+				}
+			}
+		}
+
+		// Copy files
+		for key, files := range r.MultipartForm.File {
+			for _, fileHeader := range files {
+				file, err := fileHeader.Open()
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "Failed to open uploaded file", err)
+					return
+				}
+				defer file.Close()
+
+				part, err := mw.CreateFormFile(key, fileHeader.Filename)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "Failed to create form file", err)
+					return
+				}
+				if _, err = io.Copy(part, file); err != nil {
+					writeError(w, http.StatusInternalServerError, "Failed to copy file content", err)
+					return
+				}
+			}
+		}
+		mw.Close()
+		reqBody = bodyBuf
+		contentType = mw.FormDataContentType()
+	} else {
+		writeError(w, http.StatusUnsupportedMediaType, "Unsupported content type", nil)
 		return
 	}
 
 	// Validate required fields
-	if payload.Method == "" {
+	if method == "" {
 		writeError(w, http.StatusBadRequest, "Method is required", nil)
 		return
 	}
-	if payload.URL == "" {
+	if targetURL == "" {
 		writeError(w, http.StatusBadRequest, "URL is required", nil)
 		return
 	}
@@ -54,22 +133,21 @@ func (h *ApiHandler) handleHttpReq(w http.ResponseWriter, r *http.Request) {
 		Timeout: 30 * 60 * time.Second,
 	}
 
-	// Prepare request body
-	var reqBody io.Reader
-	if payload.Body != "" {
-		reqBody = bytes.NewBufferString(payload.Body)
-	}
-
 	// Create the HTTP request
-	req, err := http.NewRequest(payload.Method, payload.URL, reqBody)
+	req, err := http.NewRequest(method, targetURL, reqBody)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "Failed to create request", err)
 		return
 	}
 
 	// Set headers
-	for key, value := range payload.Headers {
+	for key, value := range headers {
 		req.Header.Set(key, value)
+	}
+
+	// If we reconstructed a multipart body, override the Content-Type header
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 
 	// Execute request and measure duration
