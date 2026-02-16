@@ -1,0 +1,13 @@
+log-level = "debug"
+db-path = ""
+api-addr = ":20000"
+
+[[proxies]]
+listen = ":20003"
+target = "http://192.168.0.163:11434"
+truncate-log-body = true
+
+[[proxies]]
+listen = ":20004"
+target = "http://100.100.100.100:8080"
+truncate-log-body = false

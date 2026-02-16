@@ -1,0 +1,9 @@
+[build]
+bin = "./tmp/proxy"
+cmd = "go build -o ./tmp/proxy ./cmd/proxy/main.go"
+include_ext = ["go", "html", "js", "sql"]
+include_dir = ["pkg", "cmd", "migrations"]
+exclude_dir = ["out", "node_modules"]
+
+[run]
+cmd = "./tmp/proxy"

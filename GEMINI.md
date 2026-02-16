@@ -1,0 +1,3 @@
+- No need do identify the build script or verify the frontend build step
+- Skip the identify build step with golang
+- In golang, do not use interface{}, use any instead
