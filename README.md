@@ -66,7 +66,7 @@ By default, the web interface will be available at `http://localhost:20003`. Fro
 
 ### CLI Flags
 
--   `-db <path>`: Path to the SQLite database file (default: `./ihpp.db`).
+-   `-db <path>`: Path to the SQLite database file (default: `~/.proxy/proxy_logs.db`).
 -   `-listen <addr>`: Address for the management UI to listen on (default: `:20003`).
 
 ## 🤝 Contributing
