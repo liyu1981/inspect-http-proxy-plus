@@ -7,6 +7,10 @@
 
 Whether you are debugging complex microservices, reverse-engineering APIs, or testing frontend integrations, `ihpp` provides the tools you need in a single, lightweight binary.
 
+## 📖 Documentation
+
+For detailed guides, installation instructions, and feature overviews, visit our [Documentation](https://liyu1981.github.io/inspect-http-proxy-plus/).
+
 ## 🚀 Key Features
 
 -   **Multi-Proxy Management:** Run and manage multiple proxy configurations simultaneously from a single dashboard.

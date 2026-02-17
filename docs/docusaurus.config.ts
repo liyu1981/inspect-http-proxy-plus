@@ -41,6 +41,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
+          routeBasePath: '/', // Serve the docs at the site's root
           editUrl:
             'https://github.com/liyu1981/inspect-http-proxy-plus/tree/master/docs/',
         },
