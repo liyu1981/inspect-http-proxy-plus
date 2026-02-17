@@ -17,8 +17,10 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
 
 	// Parse the ConfigJSON string inside the component
 	const parsedData = useMemo(() => {
+		const configJSON = config.config_row.ConfigJSON;
+		if (typeof configJSON !== "string") return configJSON;
 		try {
-			return JSON.parse(config.config_row.ConfigJSON);
+			return JSON.parse(configJSON);
 		} catch (err) {
 			console.error("Failed to parse ConfigJSON for ID:", config.id, err);
 			return { error: "Invalid JSON format stored in database" };
@@ -50,6 +52,8 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
 			console.error("Failed to refresh config:", error);
 		}
 	};
+
+	console.log("Rendering ConfigCard with config:", config);
 
 	return (
 		<div className="overflow-hidden">

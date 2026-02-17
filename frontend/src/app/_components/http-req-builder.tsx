@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { addTabAtom } from "../_jotai/bottom-panel-store";
+import { useGlobal } from "./global-app-context";
 // Jotai Atoms
 import {
   addFormDataEntryAtom,
@@ -65,11 +66,53 @@ export default function HttpReqBuilder() {
   const updateResponseState = useSetAtom(updateResponseStateAtom);
   const updateTimestamp = useSetAtom(requestTimestampAtom);
 
+  const { allConfigs } = useGlobal();
+
   const [isCalculating, setIsCalculating] = useState(false);
 
   const sendRequest = async () => {
     if (!url) return;
     setIsCalculating(true);
+
+    let finalUrl = url;
+    // If url doesn't have scheme and host, default to localhost with current listen port
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      // Find the first active proxy configuration to get its listen port
+      const activeProxy = allConfigs.find((c) => c.is_proxyserver_active);
+      let port = "20003"; // fallback
+
+      if (activeProxy) {
+        const configJSON = activeProxy.config_row.ConfigJSON;
+        const parsed =
+          typeof configJSON === "string" ? JSON.parse(configJSON) : configJSON;
+        const listen = parsed.listen || parsed.Listen || "";
+        const portMatch = listen.match(/:(\d+)$/);
+        if (portMatch) {
+          port = portMatch[1];
+        }
+      }
+
+      // If it doesn't even have a host, assume it's a path or just needs localhost
+      if (url.startsWith("/")) {
+        finalUrl = `http://localhost:${port}${url}`;
+      } else if (!url.includes("/")) {
+        // Just a string like "echo", assume it's a path
+        finalUrl = `http://localhost:${port}/${url}`;
+      } else {
+        // Has a slash but no scheme, could be host/path or path/path
+        // If the first part doesn't look like a host (no dot or localhost), assume path
+        const firstPart = url.split("/")[0];
+        if (
+          firstPart !== "localhost" &&
+          !firstPart.includes(".") &&
+          !firstPart.includes(":")
+        ) {
+          finalUrl = `http://localhost:${port}/${url}`;
+        } else {
+          finalUrl = `http://${url}`;
+        }
+      }
+    }
 
     updateTimestamp(Date.now()); // Update timestamp to ensure hash changes on each send
 
@@ -81,7 +124,7 @@ export default function HttpReqBuilder() {
       // We pass the hash to the viewer so it knows which data to pull from the map
       addTab({
         newTab: {
-          label: `${method} ${url.replace(/^https?:\/\//, "")}`,
+          label: `${method} ${finalUrl.replace(/^https?:\/\//, "")}`,
           icon: Logs,
           content: <HttpResponseViewer responseHashKey={hash} />,
           closeable: true,
@@ -106,7 +149,7 @@ export default function HttpReqBuilder() {
         // Use FormData for multipart/form-data
         const formData = new FormData();
         formData.append("__method", method);
-        formData.append("__url", url);
+        formData.append("__url", finalUrl);
         formData.append("__headers", JSON.stringify(enabledHeaders));
 
         for (const entry of formDataEntries) {
@@ -130,7 +173,7 @@ export default function HttpReqBuilder() {
 
         res = await api.post("/api/httpreq", {
           method,
-          url,
+          url: finalUrl,
           headers: enabledHeaders,
           body: requestBody,
         });
@@ -187,7 +230,7 @@ export default function HttpReqBuilder() {
                 <Input
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://api.example.com/endpoint"
+                  placeholder="/endpoint or https://api.example.com/endpoint"
                   className="flex-1 font-mono text-sm"
                 />
               </div>

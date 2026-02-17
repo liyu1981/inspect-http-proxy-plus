@@ -1,5 +1,7 @@
 package core
 
+const Version = "dev"
+
 // Constants
 const (
 	MaxBodyPrintSize = 1024 * 10 // Max size if truncation is enabled

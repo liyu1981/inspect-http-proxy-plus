@@ -24,7 +24,9 @@ export default function ConfigsPage() {
 
 		return allConfigs.some((config) => {
 			try {
-				const parsed = JSON.parse(config.config_row.ConfigJSON);
+				const configJSON = config.config_row.ConfigJSON;
+				const parsed =
+					typeof configJSON === "string" ? JSON.parse(configJSON) : configJSON;
 				const listen = parsed.listen || parsed.Listen;
 				const target = parsed.target || parsed.Target;
 

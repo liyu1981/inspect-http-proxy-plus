@@ -33,23 +33,25 @@ func NewHandler(config *ApiConfig) *ApiHandler {
 func (h *ApiHandler) RegisterRoutes(mux *http.ServeMux) {
 	// Global Helpers
 	mux.HandleFunc("/health", h.handleHealth)
+	mux.HandleFunc("/api/version", h.handleVersion)
 	mux.HandleFunc("/api/ws", h.handleWS)
 
 	// System config endpoint
 	mux.HandleFunc("/api/sysconfig", h.handleSysConfig)
 
-	        // Config Management
-	        mux.HandleFunc("/api/configs/current", h.handleCurrentConfigs)
-	        mux.HandleFunc("/api/configs/history", h.handleConfigHistory)
-	        mux.HandleFunc("/api/configs/{id}", h.handleConfigDetail)
-	        mux.HandleFunc("/api/configs/{id}/sessions", h.handleSessionsByConfig)
-	
-	        // Proxy server control endpoints
-	        mux.HandleFunc("/api/proxyserver/create", h.handleProxyServerCreate)
-	        mux.HandleFunc("/api/proxyserver/export", h.handleProxyServerExport)
-	        mux.HandleFunc("/api/proxyserver/{id}/start", h.handleProxyServerStart)
-	        mux.HandleFunc("/api/proxyserver/{id}/stop", h.handleProxyServerStop)
-		// Scoped Session Handlers (Contextual to a Config ID)
+	// Config Management
+	mux.HandleFunc("/api/configs/current", h.handleCurrentConfigs)
+	mux.HandleFunc("/api/configs/history", h.handleConfigHistory)
+	mux.HandleFunc("/api/configs/{id}", h.handleConfigDetail)
+	mux.HandleFunc("/api/configs/{id}/sessions", h.handleSessionsByConfig)
+
+	// Proxy server control endpoints
+	mux.HandleFunc("/api/proxyserver/create", h.handleProxyServerCreate)
+	mux.HandleFunc("/api/proxyserver/export", h.handleProxyServerExport)
+	mux.HandleFunc("/api/proxyserver/{id}/start", h.handleProxyServerStart)
+	mux.HandleFunc("/api/proxyserver/{id}/stop", h.handleProxyServerStop)
+
+	// Scoped Session Handlers (Contextual to a Config ID)
 	mux.HandleFunc("/api/sessions/recent/{config_id}", h.handleRecentSessions)
 	mux.HandleFunc("/api/sessions/errors/{config_id}", h.handleErrorSessions)
 	mux.HandleFunc("/api/sessions/slow/{config_id}", h.handleSlowSessions)

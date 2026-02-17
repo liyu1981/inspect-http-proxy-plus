@@ -18,6 +18,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Update version in Go constants
+        run: |
+          VERSION=${{ github.ref_name }}
+          sed -i "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -47,7 +52,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
+          # CGO_ENABLED: 0 # never set CGO_ENABLED=0, otherwise the fts5 tag won't work
         run: |
           go build -tags fts5 -ldflags="-s -w" -o ihpp-${{ matrix.goarch }} ./cmd/proxy/main.go
 

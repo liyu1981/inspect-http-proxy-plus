@@ -315,7 +315,7 @@ func StartProxyServer(
 	// Start proxy server in its own goroutine
 	go func(srv *http.Server, idx int) {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal().
+			log.Error().
 				Int("index", idx).
 				Err(err).
 				Msg("Proxy server failed")

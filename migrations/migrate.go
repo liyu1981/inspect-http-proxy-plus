@@ -20,7 +20,10 @@ func newMigrateInstance(dbPath string) (*migrate.Migrate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+	return newMigrateInstanceFromDB(db)
+}
 
+func newMigrateInstanceFromDB(db *sql.DB) (*migrate.Migrate, error) {
 	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create migrate driver: %w", err)
@@ -32,6 +35,26 @@ func newMigrateInstance(dbPath string) (*migrate.Migrate, error) {
 	}
 
 	return migrate.NewWithInstance("iofs", sourceDriver, "sqlite3", driver)
+}
+
+func RunMigrationsWithDB(db *sql.DB) error {
+	m, err := newMigrateInstanceFromDB(db)
+	if err != nil {
+		return err
+	}
+	// Do NOT call m.Close() because it closes the underlying sql.DB connection even when passed as instance
+	// which is fatal for :memory: databases.
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("migration failed: %w", err)
+	} else if err == migrate.ErrNoChange {
+		version, _, _ := m.Version()
+		fmt.Printf("\033[36mMigration:\033[0m Database is up to date (version %d)\n", version)
+	} else {
+		version, _, _ := m.Version()
+		fmt.Printf("\033[36mMigration:\033[0m Successfully migrated to version %d\n", version)
+	}
+	return nil
 }
 
 func RunMigrations(dbPath string) error {

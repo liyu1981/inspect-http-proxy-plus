@@ -140,11 +140,15 @@ func (h *ApiHandler) handleCurrentConfigs(w http.ResponseWriter, r *http.Request
 		// Check if proxy server is active
 		isProxyServerActive := core.GlobalVar.HasProxyServer(id)
 
+		var parsedJSON any
+		_ = json.Unmarshal([]byte(configRow.ConfigJSON), &parsedJSON)
+
 		// Combine database record with runtime config details
 		fullConfig := map[string]any{
 			"id":                    configRow.ID,
 			"created_at":            configRow.CreatedAt,
 			"config_row":            configRow,
+			"parsed_config":         parsedJSON,
 			"is_proxyserver_active": isProxyServerActive,
 		}
 

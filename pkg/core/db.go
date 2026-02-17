@@ -53,9 +53,22 @@ func InitDatabase(dbPath string) (*gorm.DB, error) {
 		}
 	}
 
-	// 3. Run migrations
+	// 3. Open GORM connection early to preserve :memory: database
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect database: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sql.DB from gorm.DB: %w", err)
+	}
+
+	// 4. Run migrations on the same connection
 	log.Info().Str("path", dbPath).Msg("Running database migrations...")
-	if err := migrations.RunMigrations(dbPath); err != nil {
+	if err := migrations.RunMigrationsWithDB(sqlDB); err != nil {
 		if backupCreated {
 			log.Error().Str("backup_path", backupPath).Msg("Migration failed. A backup is available at the backup_path.")
 		}
@@ -71,15 +84,7 @@ func InitDatabase(dbPath string) (*gorm.DB, error) {
 		}
 	}
 
-	// 4. Open GORM connection
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect database: %w", err)
-	}
-
-	// 4. Enable WAL mode & performance tweaks
+	// 5. Enable WAL mode & performance tweaks
 	// WAL mode allows multiple readers and one writer simultaneously
 	if !isInMemory {
 		if err := db.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {

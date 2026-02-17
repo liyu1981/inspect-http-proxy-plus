@@ -19,8 +19,6 @@ import (
 	"github.com/liyu1981/inspect-http-proxy-plus/pkg/web"
 )
 
-const version = "v0.1.0"
-
 func initFlags() {
 	// Use pflag (POSIX compliant) for seamless Viper integration
 	pflag.Bool("version", false, "Print version information")
@@ -103,19 +101,28 @@ func loadConfig() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 }
 
-func parseProxyFlag(proxyStr string) (core.SysConfigProxyEntry, error) {
+func parseProxyFlag(proxyStr string, index int) (core.SysConfigProxyEntry, error) {
 	parts := strings.Split(proxyStr, ",")
-	if len(parts) < 2 {
-		return core.SysConfigProxyEntry{}, fmt.Errorf("invalid proxy format, expected 'listen_port,target[,truncate]'")
-	}
 
-	listen := strings.TrimSpace(parts[0])
-	target := strings.TrimSpace(parts[1])
-	truncate := false
+	var listen, target string
+	truncate := true // Default to true as requested
 
-	if len(parts) >= 3 {
-		truncateStr := strings.TrimSpace(parts[2])
-		truncate = truncateStr == "true" || truncateStr == "1" || truncateStr == "yes"
+	if len(parts) == 1 {
+		// Only target provided, or only listen provided?
+		// If it starts with http or contains :// it's likely a target
+		if strings.Contains(parts[0], "://") || strings.HasPrefix(parts[0], "http") {
+			target = strings.TrimSpace(parts[0])
+			listen = fmt.Sprintf(":%d", 20003+index)
+		} else {
+			return core.SysConfigProxyEntry{}, fmt.Errorf("invalid proxy format: %s. If providing only one part, it must be the target URL", proxyStr)
+		}
+	} else {
+		listen = strings.TrimSpace(parts[0])
+		target = strings.TrimSpace(parts[1])
+		if len(parts) >= 3 {
+			truncateStr := strings.TrimSpace(parts[2])
+			truncate = truncateStr == "true" || truncateStr == "1" || truncateStr == "yes"
+		}
 	}
 
 	return core.SysConfigProxyEntry{
@@ -177,7 +184,7 @@ func main() {
 	pflag.Parse()
 
 	if ver, _ := pflag.CommandLine.GetBool("version"); ver {
-		fmt.Printf("Inspect HTTP Proxy Plus version %s\n", version)
+		fmt.Printf("Inspect HTTP Proxy Plus version %s\n", core.Version)
 		return
 	}
 
@@ -262,8 +269,8 @@ func main() {
 	if len(proxyFlags) > 0 {
 		log.Info().Int("count", len(proxyFlags)).Msg("Overriding proxy configuration with command-line flags")
 		sysConfig.Proxies = make([]core.SysConfigProxyEntry, 0, len(proxyFlags))
-		for _, proxyStr := range proxyFlags {
-			entry, err := parseProxyFlag(proxyStr)
+		for i, proxyStr := range proxyFlags {
+			entry, err := parseProxyFlag(proxyStr, i)
 			if err != nil {
 				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy flag")
 			}
