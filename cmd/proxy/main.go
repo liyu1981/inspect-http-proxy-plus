@@ -26,6 +26,7 @@ func initFlags() {
 	pflag.Bool("version", false, "Print version information")
 	pflag.String("config", "", "Path to config file (default is ./.proxy.config.toml)")
 	pflag.String("db-path", "", "Path to database file")
+	pflag.BoolP("in-memory", "m", false, "Use in-memory database (no persistence)")
 	pflag.String("log-level", "", "Log level: debug, info, warn, error, fatal, panic, disabled")
 	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
 	pflag.StringSlice("proxy", []string{}, "Proxy configuration in format 'listen_port,target[,truncate]' (can be specified multiple times)")
@@ -73,6 +74,7 @@ func loadConfig() {
 
 	// Important: Bind flags to viper so they take precedence over config file
 	viper.BindPFlags(pflag.CommandLine)
+	viper.BindPFlag("in-memory", pflag.Lookup("in-memory"))
 
 	// If a specific config file is passed via flag, use that
 	if cfg, _ := pflag.CommandLine.GetString("config"); cfg != "" {
@@ -188,6 +190,11 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to unmarshal system configuration")
 	}
 
+	// Handle in-memory flag
+	if sysConfig.InMemory {
+		sysConfig.DBPath = ":memory:"
+	}
+
 	// 3. Initialize database (needed for persistent settings)
 	// Use resolved settings from config/flags for bootstrap
 	db, err := core.InitDatabase(sysConfig.DBPath)
@@ -196,7 +203,9 @@ func main() {
 	}
 
 	// 4. Load persistent settings from DB, falling back to config file/defaults
-	sysConfig.LogLevel = core.GetSystemSetting(db, "log_level", sysConfig.LogLevel)
+	if !sysConfig.InMemory {
+		sysConfig.LogLevel = core.GetSystemSetting(db, "log_level", sysConfig.LogLevel)
+	}
 	if sysConfig.LogLevel == "" {
 		if core.IsDev() {
 			sysConfig.LogLevel = "debug"
@@ -205,7 +214,9 @@ func main() {
 		}
 	}
 
-	sysConfig.LogDest = core.GetSystemSetting(db, "log_dest", sysConfig.LogDest)
+	if !sysConfig.InMemory {
+		sysConfig.LogDest = core.GetSystemSetting(db, "log_dest", sysConfig.LogDest)
+	}
 	if sysConfig.LogDest == "" {
 		if core.IsDev() {
 			sysConfig.LogDest = "console"
@@ -218,24 +229,33 @@ func main() {
 	core.GlobalVar.SetSysConfig(&sysConfig)
 	setupLogger(sysConfig.LogLevel, sysConfig.LogDest)
 
-	sysConfig.APIAddr = core.GetSystemSetting(db, "api_addr", sysConfig.APIAddr)
+	if !sysConfig.InMemory {
+		sysConfig.APIAddr = core.GetSystemSetting(db, "api_addr", sysConfig.APIAddr)
+	}
 	if sysConfig.APIAddr == "" {
 		sysConfig.APIAddr = ":20000"
 	}
 
-	maxRetainStr := core.GetSystemSetting(db, "max_sessions_retain", "")
-	if maxRetainStr != "" {
-		fmt.Sscanf(maxRetainStr, "%d", &sysConfig.MaxSessionsRetain)
+	if sysConfig.InMemory {
+		sysConfig.MaxSessionsRetain = 100
+	} else {
+		maxRetainStr := core.GetSystemSetting(db, "max_sessions_retain", "")
+		if maxRetainStr != "" {
+			fmt.Sscanf(maxRetainStr, "%d", &sysConfig.MaxSessionsRetain)
+		}
 	}
+
 	if sysConfig.MaxSessionsRetain <= 0 {
 		sysConfig.MaxSessionsRetain = 10000
 	}
 
 	// Ensure DB is seeded with current values if they are new
-	_ = core.SetSystemSetting(db, "log_level", sysConfig.LogLevel)
-	_ = core.SetSystemSetting(db, "log_dest", sysConfig.LogDest)
-	_ = core.SetSystemSetting(db, "api_addr", sysConfig.APIAddr)
-	_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
+	if !sysConfig.InMemory {
+		_ = core.SetSystemSetting(db, "log_level", sysConfig.LogLevel)
+		_ = core.SetSystemSetting(db, "log_dest", sysConfig.LogDest)
+		_ = core.SetSystemSetting(db, "api_addr", sysConfig.APIAddr)
+		_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
+	}
 
 	// Override with command-line proxy flags if provided
 	proxyFlags, _ := pflag.CommandLine.GetStringSlice("proxy")

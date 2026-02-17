@@ -3,7 +3,7 @@ ihpp
 *.db
 *.db-shm
 *.db-wal
-proxy
+/proxy
 .proxy/
 pkg/web/ui/out/
 proxy_server
