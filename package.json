@@ -1,0 +1,35 @@
+{
+  "name": "@liyu1981/inspect-http-proxy-plus",
+  "version": "0.1.0",
+  "description": "A powerful HTTP/HTTPS proxy with traffic inspection, full-text search, and request builder.",
+  "main": "bin/index.js",
+  "bin": {
+    "ihpp": "bin/index.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install-binary.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liyu1981/inspect-http-proxy-plus.git"
+  },
+  "keywords": [
+    "http",
+    "https",
+    "proxy",
+    "inspector",
+    "traffic",
+    "debug",
+    "fts5",
+    "sqlite"
+  ],
+  "author": "Yu Li",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/liyu1981/inspect-http-proxy-plus/issues"
+  },
+  "homepage": "https://github.com/liyu1981/inspect-http-proxy-plus#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
