@@ -11,7 +11,7 @@ interface StreamChunk {
   content: string;
 }
 
-const EventStreamRendererComponent = ({ body }: BodyRendererProps) => {
+const OpenAiEventStreamRendererComponent = ({ body }: BodyRendererProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const chunks = useMemo(() => {
@@ -50,7 +50,7 @@ const EventStreamRendererComponent = ({ body }: BodyRendererProps) => {
   if (chunks.length === 0) {
     return (
       <div className="p-4 text-xs text-muted-foreground italic">
-        No valid SSE data found in stream
+        No valid OpenAI stream data found
       </div>
     );
   }
@@ -121,10 +121,17 @@ const EventStreamRendererComponent = ({ body }: BodyRendererProps) => {
   );
 };
 
-export const eventStreamRenderer: BodyRenderer = {
-  id: "event-stream",
+export const openAiEventStreamRenderer: BodyRenderer = {
+  id: "openai-event-stream",
   label: "OpenAI Stream",
   priority: 110, // Higher than general text
-  match: (contentType: string) => contentType?.includes("text/event-stream"),
-  component: EventStreamRendererComponent,
+  match: (contentType: string, body: string) => {
+    const isSSE = contentType?.includes("text/event-stream");
+    // Regex matches common OpenAI SSE patterns: data: {"id":"chatcmpl-...","object":"chat.completion.chunk","choices":...}
+    const hasOpenAiPattern = /data: \{.*"choices":\[.*\]\}/.test(body) || 
+                             /data: \{.*"object":"chat.completion.chunk"/.test(body);
+    
+    return isSSE && hasOpenAiPattern;
+  },
+  component: OpenAiEventStreamRendererComponent,
 };
