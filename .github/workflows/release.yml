@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     name: Build Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           VERSION=${{ github.ref_name }}
-          if [[ "$OSTYPE" == "darwin"* ]]; then
+          if [ "${{ runner.os }}" = "macOS" ]; then
             sed -i '' "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
           else
             sed -i "s/const Version = \"dev\"/const Version = \"$VERSION\"/" pkg/core/constants.go
