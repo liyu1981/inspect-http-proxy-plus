@@ -1,13 +1,14 @@
 {
   "name": "@liyu1981/inspect-http-proxy-plus",
-  "version": "0.1.0",
+  "version": "0.0.0-dev",
   "description": "A powerful HTTP/HTTPS proxy with traffic inspection, full-text search, and request builder.",
   "main": "bin/index.js",
   "bin": {
     "ihpp": "bin/index.js"
   },
   "scripts": {
-    "postinstall": "node scripts/install-binary.js"
+    "postinstall": "node scripts/install-binary.js",
+    "prepublishOnly": "node scripts/sync-version.js"
   },
   "repository": {
     "type": "git",
