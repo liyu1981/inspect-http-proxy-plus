@@ -2,7 +2,7 @@ import {
   JsonEditor as JsonEditorReact,
   type JsonEditorProps as JsonEditorReactProps,
 } from "json-edit-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 
 interface JsonEditorProps {
@@ -16,6 +16,10 @@ export const JsonEditor: React.FC<
   const [json, setJson] = useState<object>(initialJson);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+
+  useEffect(() => {
+    setJson(initialJson);
+  }, [initialJson]);
 
   const handleSetData = (data: unknown) => {
     setJson(data as object);
