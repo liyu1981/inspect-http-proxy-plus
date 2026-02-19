@@ -26,6 +26,11 @@
   ],
   "author": "Yu Li",
   "license": "MIT",
+  "files": [
+    "bin/",
+    "scripts/install-binary.js",
+    "scripts/sync-version.js"
+  ],
   "bugs": {
     "url": "https://github.com/liyu1981/inspect-http-proxy-plus/issues"
   },
