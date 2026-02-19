@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -230,41 +229,22 @@ func StartProxyServer(
 	proxyEntry SysConfigProxyEntry,
 	db *gorm.DB,
 	wsPublishFn func(topic string, v any),
-) {
+) error {
 	// Validate target URL
 	targetURLParsed, err := url.Parse(proxyEntry.Target)
 	if err != nil || targetURLParsed.Scheme == "" {
-		if index != -1 {
-			fmt.Fprintf(os.Stderr, "FATAL: Invalid target URL in proxy entry at index %d: %s\n", index, proxyEntry.Target)
-			log.Fatal().
-				Int("index", index).
-				Str("target", proxyEntry.Target).
-				Msg("Invalid target URL in proxy entry")
-		} else {
-			log.Error().Str("target", proxyEntry.Target).Msg("Invalid target URL")
-			return
-		}
+		return fmt.Errorf("invalid target URL: %s", proxyEntry.Target)
 	}
 
 	// Validate listen address
 	if proxyEntry.Listen == "" {
-		if index != -1 {
-			fmt.Fprintf(os.Stderr, "FATAL: Missing 'listen' address in proxy entry at index %d\n", index)
-			log.Fatal().
-				Int("index", index).
-				Msg("Missing 'listen' address in proxy entry")
-		} else {
-			log.Error().Msg("Missing 'listen' address")
-			return
-		}
+		return fmt.Errorf("missing 'listen' address")
 	}
+
 	// Register configuration with database
 	configID, err := RegisterConfiguration(db, proxyEntry)
 	if err != nil {
-		log.Error().
-			Int("index", index).
-			Err(err).
-			Msg("Failed to register configuration with database")
+		return fmt.Errorf("failed to register configuration: %w", err)
 	}
 
 	// Add config ID to GlobalVarStore
@@ -324,6 +304,8 @@ func StartProxyServer(
 				Msg("Proxy server failed")
 		}
 	}(proxyServer, index)
+
+	return nil
 }
 
 // StopProxyServer stops a running proxy server by config ID

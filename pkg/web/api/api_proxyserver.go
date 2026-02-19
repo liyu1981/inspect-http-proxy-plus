@@ -72,7 +72,11 @@ func (h *ApiHandler) handleProxyServerStart(w http.ResponseWriter, r *http.Reque
 		Str("target", matchingEntry.Target).
 		Msg("Starting proxy server via API")
 
-	core.StartProxyServer(matchingIndex, *matchingEntry, h.db, wsPublishFn)
+	err := core.StartProxyServer(matchingIndex, *matchingEntry, h.db, wsPublishFn)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Failed to start proxy server", err)
+		return
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"config_id": configID,
@@ -134,7 +138,11 @@ func (h *ApiHandler) handleProxyServerCreate(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Register and start
-	core.StartProxyServer(-1, entry, h.db, wsPublishFn)
+	err := core.StartProxyServer(-1, entry, h.db, wsPublishFn)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Failed to start proxy server", err)
+		return
+	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "success"})
 }

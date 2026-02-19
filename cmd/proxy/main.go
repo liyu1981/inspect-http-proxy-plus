@@ -311,8 +311,18 @@ func main() {
 	reaper.Start(5 * time.Minute)
 
 	// 9. Loop through all proxy entries and create corresponding threads
+	isOverridden := len(proxyFlags) > 0
 	for i, proxyEntry := range sysConfig.Proxies {
-		core.StartProxyServer(i, proxyEntry, db, publishFunc)
+		err := core.StartProxyServer(i, proxyEntry, db, publishFunc)
+		if err != nil {
+			if isOverridden {
+				fmt.Fprintf(os.Stderr, "FATAL: Proxy server %d failed: %v\n", i, err)
+				log.Fatal().Err(err).Int("index", i).Msg("Proxy server failed (command-line override)")
+			} else {
+				fmt.Fprintf(os.Stderr, "WARNING: Skipping proxy entry %d due to error: %v\n", i, err)
+				log.Warn().Err(err).Int("index", i).Msg("Skipping malformed proxy entry from configuration")
+			}
+		}
 	}
 
 	// 9. Graceful shutdown handler
