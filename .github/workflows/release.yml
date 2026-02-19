@@ -134,31 +134,30 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write   # REQUIRED for OIDC
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js for npm registry
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@liyu1981'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Update version in Go constants
+      - name: Update version and sync package.json
         shell: bash
         run: |
           VERSION=${{ github.ref_name }}
-          # github.ref_name will be 'v0.1.0', we want to strip the 'v' for npm versioning
-          # but sync-version.js currently expects what's in constants.go.
-          # If we put 'v0.1.0' in constants.go, sync-version.js will put 'v0.1.0' in package.json.
-          # npm usually prefers '0.1.0'. Let's strip 'v' here if present.
           CLEAN_VERSION=$(echo $VERSION | sed 's/^v//')
+
+          # Update Go constant
           sed -i "s/const Version = \"dev\"/const Version = \"$CLEAN_VERSION\"/" pkg/core/constants.go
 
-      - name: Publish to npm
+          # Sync version to package.json
+          node scripts/sync-version.js
+
+      - name: Publish to npm (Trusted Publishing)
         run: npm publish --access public --provenance
