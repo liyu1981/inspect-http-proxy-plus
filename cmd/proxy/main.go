@@ -280,7 +280,7 @@ func main() {
 
 	// 7. Validate proxy entries
 	if len(sysConfig.Proxies) == 0 {
-		log.Fatal().Msg("No [[proxies]] entries found in config")
+		log.Warn().Msg("No [[proxies]] entries found in configuration. Only UI server will be active.")
 	}
 
 	// 8. Initialize single shared UI server
