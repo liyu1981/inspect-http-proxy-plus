@@ -18,7 +18,7 @@ npx @liyu1981/ihpp
 or 
 ```bash
 # in-memory db mode, best for demo or one time usage
-npx @liyu1981/ihpp -m
+npx @liyu1981/ihpp --in-memory
 ```
 
 By default, the web interface will be available at `http://localhost:20000`.
@@ -75,8 +75,27 @@ This script will concurrently run the Go backend and the Next.js frontend, allow
 
 ### CLI Flags
 
--   `-db <path>`: Path to the SQLite database file (default: `~/.proxy/proxy_logs.db`).
--   `-listen <addr>`: Address for the management UI to listen on (default: `:20003`).
+-   `--db-path <path>`: Path to the SQLite database file (default: `~/.proxy/proxy_logs.db`).
+-   `--in-memory`: Use an in-memory database (no persistence, best for one-time usage).
+-   `--log-level <level>`: Set log level (debug, info, warn, error, fatal, panic, disabled).
+-   `--config <path>`: Path to a `.toml` configuration file.
+
+### Proxy Specifications
+
+Specify one or more proxies as positional arguments:
+
+```bash
+# Basic target only (starts at :20003)
+ihpp http://localhost:8080
+
+# Specific listen port and target
+ihpp :3000,http://localhost:8080
+
+# Multiple proxies
+ihpp http://localhost:8080 :3001,http://localhost:9000
+```
+
+By default, the management UI is available at `http://localhost:20000`.
 
 ## 🤝 Contributing
 
