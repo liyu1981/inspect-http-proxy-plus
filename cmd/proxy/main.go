@@ -24,20 +24,21 @@ func initFlags() {
 	pflag.Bool("version", false, "Print version information")
 	pflag.String("config", "", "Path to config file (default is ./.proxy.config.toml)")
 	pflag.String("db-path", "", "Path to database file")
-	pflag.BoolP("in-memory", "m", false, "Use in-memory database (no persistence)")
+	pflag.Bool("in-memory", false, "Use in-memory database (no persistence)")
 	pflag.String("log-level", "", "Log level: debug, info, warn, error, fatal, panic, disabled")
 	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
-	pflag.StringSlice("proxy", []string{}, "Proxy configuration in format 'listen_port,target[,truncate]' (can be specified multiple times)")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy Plus - A simple proxy to inspect and log HTTP requests.\n\n")
-		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] [proxy1] [proxy2] ...\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		pflag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nProxy Format:\n")
-		fmt.Fprintf(os.Stderr, "  --proxy listen_port,target[,truncate]\n")
-		fmt.Fprintf(os.Stderr, "  Example: --proxy :3000,http://localhost:8000,true\n")
-		fmt.Fprintf(os.Stderr, "  Multiple proxies: --proxy :3000,http://localhost:8000 --proxy :3001,http://localhost:8001\n")
+		fmt.Fprintf(os.Stderr, "  target\n")
+		fmt.Fprintf(os.Stderr, "  listen_port,target[,truncate]\n")
+		fmt.Fprintf(os.Stderr, "  Example: :3000,http://localhost:8000,true\n")
+		fmt.Fprintf(os.Stderr, "  Example: http://localhost:8000\n")
+		fmt.Fprintf(os.Stderr, "  Multiple proxies: http://localhost:8000 http://localhost:8001\n")
 	}
 }
 
@@ -266,16 +267,16 @@ func main() {
 		_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
 	}
 
-	// Override with command-line proxy flags if provided
-	proxyFlags, _ := pflag.CommandLine.GetStringSlice("proxy")
-	if len(proxyFlags) > 0 {
-		log.Info().Int("count", len(proxyFlags)).Msg("Overriding proxy configuration with command-line flags")
-		sysConfig.Proxies = make([]core.SysConfigProxyEntry, 0, len(proxyFlags))
-		for i, proxyStr := range proxyFlags {
+	// Override with command-line proxy positional arguments if provided
+	proxyArgs := pflag.Args()
+	if len(proxyArgs) > 0 {
+		log.Info().Int("count", len(proxyArgs)).Msg("Overriding proxy configuration with command-line arguments")
+		sysConfig.Proxies = make([]core.SysConfigProxyEntry, 0, len(proxyArgs))
+		for i, proxyStr := range proxyArgs {
 			entry, err := parseProxyFlag(proxyStr, i)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy flag '%s': %v\n", proxyStr, err)
-				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy flag")
+				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy argument '%s': %v\n", proxyStr, err)
+				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy argument")
 			}
 			sysConfig.Proxies = append(sysConfig.Proxies, entry)
 		}
@@ -311,7 +312,7 @@ func main() {
 	reaper.Start(5 * time.Minute)
 
 	// 9. Loop through all proxy entries and create corresponding threads
-	isOverridden := len(proxyFlags) > 0
+	isOverridden := len(proxyArgs) > 0
 	for i, proxyEntry := range sysConfig.Proxies {
 		err := core.StartProxyServer(i, proxyEntry, db, publishFunc)
 		if err != nil {
