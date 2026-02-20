@@ -25,7 +25,7 @@ func TestHandleHttpReq_JSON(t *testing.T) {
 		if string(body) != "test body" {
 			t.Errorf("Target expected body 'test body', got '%s'", string(body))
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}))
@@ -34,7 +34,7 @@ func TestHandleHttpReq_JSON(t *testing.T) {
 	// 2. Setup Handler
 	// DB is not used in handleHttpReq
 	handler := NewHandler(&ApiConfig{DB: nil})
-	
+
 	// 3. Create Request Payload
 	payload := map[string]any{
 		"method": "POST",

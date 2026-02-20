@@ -14,7 +14,7 @@ func TestUIServer_Routing(t *testing.T) {
 		DB:         db,
 		ListenAddr: ":0",
 	})
-	
+
 	handler := ui.SetupRoutes()
 
 	// 1. Test API route

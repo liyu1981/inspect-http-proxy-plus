@@ -18,13 +18,13 @@ func TestHandleRecentSessions(t *testing.T) {
 	u, _ := url.Parse("http://example.com/foo")
 	// Create a dummy session
 	entry := &core.LogEntry{
-		ConfigID:      configID,
-		Timestamp:     time.Now(),
-		ClientAddr:    "127.0.0.1:12345",
-		RequestMethod: "GET",
-		RequestURL:    u,
-		RequestProto:  "HTTP/1.1",
-		RequestHost:   "example.com",
+		ConfigID:       configID,
+		Timestamp:      time.Now(),
+		ClientAddr:     "127.0.0.1:12345",
+		RequestMethod:  "GET",
+		RequestURL:     u,
+		RequestProto:   "HTTP/1.1",
+		RequestHost:    "example.com",
 		RequestHeaders: http.Header{},
 	}
 
@@ -55,7 +55,7 @@ func TestHandleRecentSessions(t *testing.T) {
 	if result["config_id"] != configID {
 		t.Errorf("Expected config_id %s, got %v", configID, result["config_id"])
 	}
-	
+
 	sessions, ok := result["sessions"].([]any)
 	if !ok {
 		t.Errorf("Expected sessions array in response")
@@ -70,13 +70,13 @@ func TestHandleSessionDetail(t *testing.T) {
 
 	u, _ := url.Parse("http://example.com/bar")
 	entry := &core.LogEntry{
-		ConfigID:      configID,
-		Timestamp:     time.Now(),
-		ClientAddr:    "127.0.0.1:12345",
-		RequestMethod: "POST",
-		RequestURL:    u,
-		RequestProto:  "HTTP/1.1",
-		RequestHost:   "example.com",
+		ConfigID:       configID,
+		Timestamp:      time.Now(),
+		ClientAddr:     "127.0.0.1:12345",
+		RequestMethod:  "POST",
+		RequestURL:     u,
+		RequestProto:   "HTTP/1.1",
+		RequestHost:    "example.com",
 		RequestHeaders: http.Header{"Content-Type": []string{"application/json"}},
 	}
 

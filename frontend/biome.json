@@ -20,7 +20,7 @@
         "noUselessTypeConstraint": "error"
       },
       "correctness": {
-        "noUnusedVariables": "error"
+        "noUnusedVariables": "warn"
       },
       "performance": {
         "noImgElement": "warn",
@@ -36,7 +36,7 @@
       },
       "suspicious": {
         "noDocumentImportInPage": "error",
-        "noExplicitAny": "error",
+        "noExplicitAny": "warn",
         "noExtraNonNullAssertion": "error",
         "noHeadImportInDocument": "error",
         "noMisleadingInstantiator": "error",

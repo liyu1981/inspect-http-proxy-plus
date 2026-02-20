@@ -14,13 +14,13 @@ func TestCreateBookmark(t *testing.T) {
 	// Create a session
 	u, _ := url.Parse("http://example.com/api")
 	entry := &LogEntry{
-		ConfigID:      configID,
-		Timestamp:     time.Now(),
-		ClientAddr:    "127.0.0.1",
-		RequestMethod: "GET",
-		RequestURL:    u,
-		RequestProto:  "HTTP/1.1",
-		RequestHost:   "example.com",
+		ConfigID:       configID,
+		Timestamp:      time.Now(),
+		ClientAddr:     "127.0.0.1",
+		RequestMethod:  "GET",
+		RequestURL:     u,
+		RequestProto:   "HTTP/1.1",
+		RequestHost:    "example.com",
 		RequestHeaders: http.Header{},
 	}
 	session, err := CreateProxySession(db, entry)
@@ -53,7 +53,7 @@ func TestCreateBookmark(t *testing.T) {
 
 func TestUpdateBookmarkMetadata(t *testing.T) {
 	db := setupTestDB(t)
-	
+
 	// Pre-create bookmark with dummy session
 	session, _ := CreateProxySession(db, &LogEntry{RequestURL: &url.URL{Path: "/foo"}})
 	bookmark, _ := CreateBookmark(db, session.ID)
@@ -70,7 +70,7 @@ func TestUpdateBookmarkMetadata(t *testing.T) {
 
 func TestDeleteBookmark(t *testing.T) {
 	db := setupTestDB(t)
-	
+
 	session, _ := CreateProxySession(db, &LogEntry{RequestURL: &url.URL{Path: "/foo"}})
 	bookmark, _ := CreateBookmark(db, session.ID)
 
@@ -123,8 +123,8 @@ func TestGetBookmarks_Search(t *testing.T) {
 	contents := []string{"orange", "grape"}
 	for _, content := range contents {
 		session, _ := CreateProxySession(db, &LogEntry{
-			ConfigID:   configID,
-			RequestURL: &url.URL{Path: "/" + content},
+			ConfigID:    configID,
+			RequestURL:  &url.URL{Path: "/" + content},
 			RequestBody: []byte("body " + content),
 		})
 		_, err := CreateBookmark(db, session.ID)

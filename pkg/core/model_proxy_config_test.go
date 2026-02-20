@@ -49,7 +49,7 @@ func TestGetConfigRowByID(t *testing.T) {
 	db := setupTestDB(t)
 
 	row, _ := GetOrCreateConfigRow(db, "path", "cwd", "json")
-	
+
 	found, err := GetConfigRowByID(db, row.ID)
 	if err != nil {
 		t.Fatalf("GetConfigRowByID failed: %v", err)

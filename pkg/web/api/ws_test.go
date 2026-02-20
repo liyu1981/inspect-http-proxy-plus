@@ -16,10 +16,10 @@ func TestWsHub(t *testing.T) {
 
 	// Register
 	hub.register <- client
-	
+
 	// Wait a bit for the async register
 	time.Sleep(10 * time.Millisecond)
-	
+
 	hub.mu.Lock()
 	if _, ok := hub.clients[client]; !ok {
 		t.Error("Client was not registered")

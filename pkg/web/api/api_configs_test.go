@@ -45,7 +45,7 @@ func TestHandleConfigs(t *testing.T) {
 	// 4. Test GET /api/configs/current
 	core.GlobalVar.ConfigClear()
 	core.GlobalVar.ConfigAdd(config1.ID)
-	
+
 	req = httptest.NewRequest("GET", "/api/configs/current", nil)
 	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, req)

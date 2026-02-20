@@ -83,11 +83,11 @@ func (h *ApiHandler) handleConfigHistory(w http.ResponseWriter, r *http.Request)
 
 	// Parse ConfigJSON for each row to make it easier for the frontend
 	type HistoryItem struct {
-		ID            string    `json:"id"`
-		CreatedAt     time.Time `json:"created_at"`
-		ParsedConfig  any       `json:"parsed_config"`
-		SourcePath    string    `json:"source_path"`
-		Cwd           string    `json:"cwd"`
+		ID           string    `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		ParsedConfig any       `json:"parsed_config"`
+		SourcePath   string    `json:"source_path"`
+		Cwd          string    `json:"cwd"`
 	}
 
 	history := make([]HistoryItem, 0, len(configs))

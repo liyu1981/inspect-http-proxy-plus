@@ -23,7 +23,7 @@ func TestProxyHandler_EndToEnd(t *testing.T) {
 		if r.Header.Get("X-Custom-Header") != "Foo" {
 			t.Errorf("Target expected X-Custom-Header: Foo")
 		}
-		
+
 		body, _ := io.ReadAll(r.Body)
 		if string(body) != "request body" {
 			t.Errorf("Target expected body 'request body', got '%s'", string(body))

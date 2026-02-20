@@ -18,12 +18,12 @@ type ProxyBookmark struct {
 	Tags string
 
 	// Full copy of ProxySessionRow fields
-	Timestamp               time.Time      `gorm:"index"`
+	Timestamp               time.Time `gorm:"index"`
 	DurationMs              int64
 	ClientAddr              string
 	ClientIP                string
-	RequestMethod           string         `gorm:"index"`
-	RequestPath             string         `gorm:"index"`
+	RequestMethod           string `gorm:"index"`
+	RequestPath             string `gorm:"index"`
 	RequestQuery            string
 	RequestProto            string
 	RequestHost             string
@@ -34,14 +34,14 @@ type ProxyBookmark struct {
 	RequestBodySize         int
 	RequestContentType      string
 	RequestContentEncoding  string
-	ResponseStatusCode      int            `gorm:"index"`
+	ResponseStatusCode      int `gorm:"index"`
 	ResponseStatusText      string
 	ResponseHeaders         datatypes.JSON `gorm:"type:text"`
 	ResponseBody            []byte         `gorm:"type:blob"`
 	ResponseBodySize        int
 	ResponseContentType     string
 	ResponseContentEncoding string
-	ConfigID                string         `gorm:"index"`
+	ConfigID                string `gorm:"index"`
 
 	// Full copy of ProxyConfigRow fields (relevant ones)
 	ConfigSourcePath string

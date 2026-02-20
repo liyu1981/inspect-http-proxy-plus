@@ -24,7 +24,7 @@ func NewMaxSessionRowsReaper(db *gorm.DB, publish func(topic string, v any)) *Ma
 // Start runs the reaper loop
 func (r *MaxSessionRowsReaper) Start(interval time.Duration) {
 	ticker := time.NewTicker(interval)
-	
+
 	// Run once immediately on startup
 	r.reap()
 
