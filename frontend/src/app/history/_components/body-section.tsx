@@ -24,18 +24,26 @@ export function BodySection({ title, body, size, type }: BodySectionProps) {
       </div>
     );
 
-  let content = body;
-  let isBase64 = false;
+  // For some types (images, zip), we prefer to pass the raw (potentially base64) body
+  // to the renderer instead of trying to decode it here, which might mangle binary data.
+  const isBinaryType =
+    type.startsWith("image/") ||
+    type.includes("zip") ||
+    type.includes("application/octet-stream");
 
-  try {
-    if (typeof body === "string") {
-      const decoded = atob(body);
-      // Check if decoded looks like text (no non-printable chars ideally, but simple check)
-      content = decoded;
-      isBase64 = true;
+  let content = body;
+  let isBase64Decoded = false;
+
+  if (!isBinaryType) {
+    try {
+      if (typeof body === "string") {
+        const decoded = atob(body);
+        content = decoded;
+        isBase64Decoded = true;
+      }
+    } catch (_e) {
+      // Not base64 or failed
     }
-  } catch (_e) {
-    // Not base64 or failed
   }
 
   const renderer = findRenderer(type, content);
@@ -76,7 +84,7 @@ export function BodySection({ title, body, size, type }: BodySectionProps) {
           <div className="flex gap-2">
             <span>{size} bytes</span>
             <span>{type}</span>
-            {isBase64 && (
+            {isBase64Decoded && (
               <Badge variant="outline" className="text-[10px]">
                 Base64 Decoded
               </Badge>

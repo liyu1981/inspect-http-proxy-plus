@@ -23,7 +23,7 @@ type ResponsePayload struct {
 	Status     int               `json:"status"`
 	StatusText string            `json:"statusText"`
 	Headers    map[string]string `json:"headers"`
-	Body       string            `json:"body"`
+	Body       []byte            `json:"body"`
 	Duration   int64             `json:"duration"` // in milliseconds
 }
 
@@ -181,7 +181,7 @@ func (h *ApiHandler) handleHttpReq(w http.ResponseWriter, r *http.Request) {
 		Status:     resp.StatusCode,
 		StatusText: resp.Status,
 		Headers:    respHeaders,
-		Body:       string(respBody),
+		Body:       respBody,
 		Duration:   duration,
 	}
 

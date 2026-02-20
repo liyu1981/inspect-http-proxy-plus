@@ -12,14 +12,15 @@ import {
   Logs,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { getResponseStateAtom, responseStateAtom } from "../_jotai/http-res";
+import { findRenderer } from "./body-renderers/registry";
 
 export interface HttpResponseViewerProps {
   responseHashKey: string;
@@ -29,62 +30,95 @@ export function HttpResponseViewer({
   responseHashKey,
 }: HttpResponseViewerProps) {
   const getResponseState = useSetAtom(getResponseStateAtom);
-  // Use useMemo to create the atom only when responseHashKey changes
   const stateAtom = useMemo(
     () => responseStateAtom(responseHashKey),
     [responseHashKey],
   );
   const state = useAtomValue(stateAtom);
+  const [isRaw, setIsRaw] = useState(false);
 
   useEffect(() => {
-    // Ensure it's loaded into the atom if it exists in IndexedDB but not in memory
     getResponseState(responseHashKey);
   }, [responseHashKey, getResponseState]);
 
   const { data: response, error, loading, request } = state;
 
+  const contentType = response?.headers["content-type"] || "text/plain";
+  const body = response?.body || "";
+
   const copyResponse = () => {
-    if (response?.body) navigator.clipboard.writeText(response.body);
+    if (body) navigator.clipboard.writeText(body);
   };
 
   const downloadResponse = () => {
-    if (response?.body) {
-      const blob = new Blob([response.body], { type: "text/plain" });
+    if (body) {
+      // If it looks like base64, we should decode it for download if we want the actual file
+      const isBase64 =
+        /^[A-Za-z0-9+/=]+$/.test(body.trim()) && body.length > 20;
+      let blob: Blob;
+      if (isBase64) {
+        try {
+          const byteCharacters = atob(body);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          blob = new Blob([byteArray], { type: contentType });
+        } catch (e) {
+          blob = new Blob([body], { type: "text/plain" });
+        }
+      } else {
+        blob = new Blob([body], { type: contentType });
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `response-${responseHashKey.slice(0, 6)}.txt`;
+      a.download = `response-${responseHashKey.slice(0, 6)}.${getFileExtension(contentType)}`;
       a.click();
       URL.revokeObjectURL(url);
     }
   };
 
+  const renderer = findRenderer(contentType, body);
+
   return (
     <div className="flex flex-col h-full space-y-4 p-4">
       <div className="flex items-center justify-between gap-4 flex-shrink-0">
         <div className="flex flex-col gap-1 min-w-0">
-          <div className="font-bold flex items-center gap-2">
+          <div className="font-bold flex items-center gap-2 text-sm">
             <Activity className="h-4 w-4 text-primary" />
-            Result Of Request: {responseHashKey}
+            Result: {responseHashKey.slice(0, 8)}
           </div>
           {request && (
-            <div className="text-sm p-0 m-0 px-6">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="font-medium">Request Time</div>
-                <div className="col-span-2 font-mono break-all">
-                  {format(new Date(request.timestamp), "PP pp")}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="font-medium">{request.method}</div>
-                <div className="col-span-2 font-mono">{request.url}</div>
-              </div>
+            <div className="text-[10px] text-muted-foreground p-0 m-0 px-6">
+              <span className="font-bold text-primary mr-2">
+                {request.method}
+              </span>
+              <span className="font-mono">{request.url}</span>
             </div>
           )}
         </div>
 
         {response && (
           <div className="flex items-center gap-1 bg-background p-1 shrink-0">
+            {renderer && (
+              <div className="flex items-center gap-2 mr-4 px-2 border-r">
+                <Label
+                  htmlFor="raw-mode-viewer"
+                  className="text-[10px] uppercase font-bold text-muted-foreground cursor-pointer"
+                >
+                  Raw
+                </Label>
+                <Switch
+                  id="raw-mode-viewer"
+                  checked={isRaw}
+                  onCheckedChange={setIsRaw}
+                  className="scale-75"
+                />
+              </div>
+            )}
             <Button
               onClick={copyResponse}
               variant="ghost"
@@ -114,11 +148,11 @@ export function HttpResponseViewer({
           loading && !response ? "animate-pulse" : "",
         )}
       >
-        <Tabs defaultValue="status" className="flex flex-col h-full">
+        <Tabs defaultValue="body" className="flex flex-col h-full">
           <TabsList className="w-full justify-start rounded-none border-b-none bg-muted/20 px-4">
             {[
-              { value: "status", label: "Status", icon: Activity },
               { value: "body", label: "Response Body", icon: Logs },
+              { value: "status", label: "Status", icon: Activity },
               { value: "headers", label: "Response Headers", icon: List },
               { value: "request", label: "Request Details", icon: FileText },
             ].map((tab) => (
@@ -127,9 +161,7 @@ export function HttpResponseViewer({
                 value={tab.value}
                 className={cn(
                   "rounded-none h-full px-4 text-xs font-medium transition-all border-none shadow-none flex items-center gap-2",
-                  // Hover State: Medium Dark
                   "hover:bg-muted/40 hover:text-foreground",
-                  // Active State: Deep Dark
                   "data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-none",
                 )}
               >
@@ -138,6 +170,30 @@ export function HttpResponseViewer({
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Response Body */}
+          <TabsContent
+            value="body"
+            className="flex-1 m-0 data-[state=active]:flex overflow-hidden"
+          >
+            <div className="w-full h-full bg-muted/10 rounded-sm overflow-auto">
+              {loading && !response ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground animate-pulse italic text-sm">
+                  Waiting for data...
+                </div>
+              ) : !body ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground italic text-sm">
+                  No response body
+                </div>
+              ) : renderer && !isRaw ? (
+                <renderer.component body={body} contentType={contentType} />
+              ) : (
+                <pre className="p-4 font-mono text-xs whitespace-pre-wrap break-all">
+                  {body}
+                </pre>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="status" className="m-0 border-none outline-none">
             <div className="flex-shrink-0 p-4">
@@ -165,7 +221,7 @@ export function HttpResponseViewer({
                         {response.status} {response.statusText}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground italic">
+                      <span className="text-muted-foreground italic text-xs">
                         Pending...
                       </span>
                     )}
@@ -196,20 +252,6 @@ export function HttpResponseViewer({
             </div>
           </TabsContent>
 
-          {/* Response Body */}
-          <TabsContent
-            value="body"
-            className="flex-1 px-4 m-0 data-[state=active]:flex overflow-hidden"
-          >
-            <Textarea
-              value={response?.body || ""}
-              readOnly
-              placeholder={loading ? "Waiting for data..." : "No response body"}
-              className="font-mono text-sm bg-muted/10 w-full h-full resize-none focus-visible:ring-0 rounded-sm p-4"
-            />
-          </TabsContent>
-
-          {/* Response Headers */}
           <TabsContent value="headers" className="flex-1 overflow-auto p-4 m-0">
             <div className="space-y-1 border rounded-md">
               {response ? (
@@ -234,7 +276,6 @@ export function HttpResponseViewer({
             </div>
           </TabsContent>
 
-          {/* Detailed Request View (Snapshotted) */}
           <TabsContent
             value="request"
             className="flex-1 overflow-auto p-4 m-0 space-y-4"
@@ -296,4 +337,15 @@ export function HttpResponseViewer({
       </div>
     </div>
   );
+}
+
+function getFileExtension(contentType: string): string {
+  if (contentType.includes("json")) return "json";
+  if (contentType.includes("html")) return "html";
+  if (contentType.includes("png")) return "png";
+  if (contentType.includes("jpeg") || contentType.includes("jpg")) return "jpg";
+  if (contentType.includes("gif")) return "gif";
+  if (contentType.includes("zip")) return "zip";
+  if (contentType.includes("pdf")) return "pdf";
+  return "txt";
 }

@@ -1,16 +1,21 @@
 "use client";
 
+import { fileRenderer } from "./file-renderer";
+import { imageRenderer } from "./image-renderer";
 import { jsonRenderer } from "./json-renderer";
 import { ollamaStreamRenderer } from "./ollama-stream-renderer";
 import { openAiEventStreamRenderer } from "./openai-event-stream-renderer";
 import type { BodyRenderer } from "./types";
+import { zipRenderer } from "./zip-renderer";
 
 /** Registered body renderer plugins */
 const renderers: BodyRenderer[] = [
   jsonRenderer,
+  imageRenderer,
+  zipRenderer,
   openAiEventStreamRenderer,
   ollamaStreamRenderer,
-  // Future renderers (e.g., htmlRenderer, imageRenderer) go here
+  fileRenderer,
 ];
 
 /**
