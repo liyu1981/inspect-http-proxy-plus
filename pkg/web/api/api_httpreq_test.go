@@ -65,8 +65,14 @@ func TestHandleHttpReq_JSON(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if result["body"] != "ok" {
-		t.Errorf("Expected response body 'ok', got %v", result["body"])
+	// Body is []byte in Go, which is base64 encoded in JSON
+	bodyVal, ok := result["body"].(string)
+	if !ok {
+		t.Fatalf("Expected body to be a string (base64), got %T", result["body"])
+	}
+	
+	if bodyVal != "b2s=" { // "ok" in base64
+		t.Errorf("Expected response body 'b2s=' (base64 of 'ok'), got %v", bodyVal)
 	}
 	if status, ok := result["status"].(float64); !ok || status != 200 {
 		t.Errorf("Expected status 200, got %v", result["status"])
