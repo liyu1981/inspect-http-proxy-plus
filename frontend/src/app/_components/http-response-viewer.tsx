@@ -46,8 +46,38 @@ export function HttpResponseViewer({
   const contentType = response?.headers["content-type"] || "text/plain";
   const body = response?.body || "";
 
+  // The body in the API response is now a byte slice, which is base64 encoded in JSON.
+  // For display as text, we need to decode it if it looks like base64.
+  const displayBody = useMemo(() => {
+    if (!body) return "";
+    
+    const isTextLike = 
+      contentType.startsWith("text/") || 
+      contentType.includes("json") || 
+      contentType.includes("javascript") || 
+      contentType.includes("xml") ||
+      contentType.includes("html");
+    
+    if (isTextLike) {
+      try {
+        // Simple base64 detection
+        if (/^[A-Za-z0-9+/=]+$/.test(body.trim())) {
+          const binary = atob(body);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return new TextDecoder().decode(bytes);
+        }
+      } catch (e) {
+        // Fallback to raw if decoding fails
+      }
+    }
+    return body;
+  }, [body, contentType]);
+
   const copyResponse = () => {
-    if (body) navigator.clipboard.writeText(body);
+    if (displayBody) navigator.clipboard.writeText(displayBody);
   };
 
   const downloadResponse = () => {
@@ -189,7 +219,7 @@ export function HttpResponseViewer({
                 <renderer.component body={body} contentType={contentType} />
               ) : (
                 <pre className="p-4 font-mono text-xs whitespace-pre-wrap break-all">
-                  {body}
+                  {displayBody}
                 </pre>
               )}
             </div>
