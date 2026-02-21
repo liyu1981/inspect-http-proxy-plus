@@ -10,4 +10,4 @@
 - NEVER do git commit unless the user explicitly tells you to
 - CGO is necessary as we need fts5 support for sqlite3
 - Do NOT scan the `design` folder for pending tasks or issues; only rely on GitHub issues or explicit user instructions.
-- Merge Status and Method filters into the session list table headers using a stacked layout (h-16 height) and provide a FilterX button in the Time header to clear all filters.
+- When create github pr, remember to mention the issue number in pr messsage.
