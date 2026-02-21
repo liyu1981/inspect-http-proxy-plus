@@ -140,10 +140,16 @@ function InspectPageContent() {
               </span>
               <span className="truncate font-mono text-primary/80">
                 {(() => {
-                  const cfg = typeof selectedConfig.config_row.ConfigJSON === 'string' 
-                    ? JSON.parse(selectedConfig.config_row.ConfigJSON) 
-                    : selectedConfig.config_row.ConfigJSON;
-                  return `${cfg.listen || cfg.Listen || '??'} 🠞 ${cfg.target || cfg.Target || '??'}`;
+                  try {
+                    const cfg = (typeof selectedConfig.config_row.ConfigJSON ===
+                    "string"
+                      ? JSON.parse(selectedConfig.config_row.ConfigJSON)
+                      : selectedConfig.config_row
+                          .ConfigJSON) as unknown as Record<string, unknown>;
+                    return `${(cfg.listen as string) || (cfg.Listen as string) || "??"} 🠞 ${(cfg.target as string) || (cfg.Target as string) || "??"}`;
+                  } catch (_e) {
+                    return "invalid config";
+                  }
                 })()}
               </span>
             </div>
@@ -151,7 +157,9 @@ function InspectPageContent() {
               <span className="font-semibold uppercase opacity-60 text-[9px]">
                 Source:
               </span>
-              <span className="truncate">{selectedConfig.config_row.SourcePath}</span>
+              <span className="truncate">
+                {selectedConfig.config_row.SourcePath}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-semibold uppercase opacity-60 text-[9px]">

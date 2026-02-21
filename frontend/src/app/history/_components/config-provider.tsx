@@ -67,7 +67,7 @@ function ConfigProviderInner({
       setSelectedConfigIdState(defaultId);
       updateURLConfigId(defaultId);
     }
-  }, [searchParams, allConfigs, updateURLConfigId, selectedConfigId]);
+  }, [searchParams, allConfigs, updateURLConfigId, selectedConfigId, mode]);
 
   const setSelectedConfigId = React.useCallback(
     (id: string) => {

@@ -18,18 +18,27 @@ interface ConfigSelectorProps {
 }
 
 export function formatConfigDisplayName(config: ProxyConfig) {
-  let parsedJson: any;
+  let parsedJson: Record<string, unknown>;
   if (typeof config.config_row.ConfigJSON === "string") {
     try {
       parsedJson = JSON.parse(config.config_row.ConfigJSON);
-    } catch (e) {
+    } catch (_e) {
       parsedJson = {};
     }
   } else {
-    parsedJson = config.config_row.ConfigJSON;
+    parsedJson = config.config_row.ConfigJSON as unknown as Record<
+      string,
+      unknown
+    >;
   }
-  const listen = parsedJson?.listen || parsedJson?.Listen || "unknown";
-  const target = parsedJson?.target || parsedJson?.Target || "unknown";
+  const listen =
+    (parsedJson?.listen as string) ||
+    (parsedJson?.Listen as string) ||
+    "unknown";
+  const target =
+    (parsedJson?.target as string) ||
+    (parsedJson?.Target as string) ||
+    "unknown";
 
   const source =
     config.config_row.SourcePath !== "shell"
@@ -46,15 +55,16 @@ export function ConfigSelector({
 }: ConfigSelectorProps) {
   const [filterQuery, setFilterQuery] = React.useState("");
 
-  if (!Array.isArray(configs) || configs.length === 0) {
-    return null;
-  }
-
-  const selectedConfig = configs.find(
-    (c) => c.config_row.ID === selectedConfigId,
+  const selectedConfig = React.useMemo(
+    () =>
+      Array.isArray(configs)
+        ? configs.find((c) => c.config_row.ID === selectedConfigId)
+        : undefined,
+    [configs, selectedConfigId],
   );
 
   const filteredConfigs = React.useMemo(() => {
+    if (!Array.isArray(configs)) return [];
     if (!filterQuery) return configs;
     const q = filterQuery.toLowerCase();
     return configs.filter((c) => {
@@ -66,6 +76,10 @@ export function ConfigSelector({
       );
     });
   }, [configs, filterQuery]);
+
+  if (!Array.isArray(configs) || configs.length === 0) {
+    return null;
+  }
 
   return (
     <DropdownMenu onOpenChange={(open) => !open && setFilterQuery("")}>
