@@ -16,13 +16,18 @@ export default function ConfigsPage() {
   const { allConfigs, isLoading, refreshConfigs, sysConfig } = useGlobal();
   const [isExporting, setIsExporting] = useState(false);
 
+  const activeConfigs = useMemo(
+    () => allConfigs.filter((c) => c.is_proxyserver_active),
+    [allConfigs],
+  );
+
   // Check if any active proxy is dynamic (not in the current toml file)
   const hasDynamicProxies = useMemo(() => {
-    if (!sysConfig?.proxies || !allConfigs.length) return false;
+    if (!sysConfig?.proxies || !activeConfigs.length) return false;
 
     const normalize = (s: string) => s?.trim().toLowerCase().replace(/\/$/, "");
 
-    return allConfigs.some((config) => {
+    return activeConfigs.some((config) => {
       try {
         const configJSON = config.config_row.ConfigJSON;
         const parsed =
@@ -39,7 +44,7 @@ export default function ConfigsPage() {
         return false;
       }
     });
-  }, [sysConfig, allConfigs]);
+  }, [sysConfig, activeConfigs]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -93,7 +98,7 @@ export default function ConfigsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Active & Loaded Proxies ({allConfigs.length})
+                Active & Loaded Proxies ({activeConfigs.length})
               </h2>
             </div>
 
@@ -101,12 +106,12 @@ export default function ConfigsPage() {
               <div className="p-10 border border-dashed rounded-xl text-center text-muted-foreground animate-pulse">
                 Loading...
               </div>
-            ) : allConfigs.length === 0 ? (
+            ) : activeConfigs.length === 0 ? (
               <div className="p-10 border border-dashed rounded-xl text-center text-muted-foreground bg-muted/20">
                 No active proxy configs.
               </div>
             ) : (
-              allConfigs.map((config) => (
+              activeConfigs.map((config) => (
                 <ConfigCard key={config.id} config={config} />
               ))
             )}

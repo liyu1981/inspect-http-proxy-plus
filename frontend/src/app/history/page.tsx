@@ -68,6 +68,10 @@ function InspectPageContent() {
 
   const headTitle = "History Traffic";
 
+  const selectedConfig = React.useMemo(() => {
+    return allConfigs.find((c) => c.config_row.ID === selectedConfigId);
+  }, [allConfigs, selectedConfigId]);
+
   // Show no configs state if no configs available
   if (allConfigs.length === 0) {
     return (
@@ -127,7 +131,36 @@ function InspectPageContent() {
       </AppHeader>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {selectedConfig && (
+          <div className="bg-muted/30 border-b px-4 py-1.5 flex items-center gap-4 text-[11px] text-muted-foreground shrink-0 overflow-hidden">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold uppercase opacity-60 text-[9px]">
+                Proxy:
+              </span>
+              <span className="truncate font-mono text-primary/80">
+                {(() => {
+                  const cfg = typeof selectedConfig.config_row.ConfigJSON === 'string' 
+                    ? JSON.parse(selectedConfig.config_row.ConfigJSON) 
+                    : selectedConfig.config_row.ConfigJSON;
+                  return `${cfg.listen || cfg.Listen || '??'} 🠞 ${cfg.target || cfg.Target || '??'}`;
+                })()}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold uppercase opacity-60 text-[9px]">
+                Source:
+              </span>
+              <span className="truncate">{selectedConfig.config_row.SourcePath}</span>
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold uppercase opacity-60 text-[9px]">
+                WorkDir:
+              </span>
+              <span className="truncate">{selectedConfig.config_row.Cwd}</span>
+            </div>
+          </div>
+        )}
         <WithConfigsHistory
           configId={selectedConfigId}
           onMutate={handleMutate}

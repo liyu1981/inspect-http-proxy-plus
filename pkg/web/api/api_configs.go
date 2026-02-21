@@ -106,27 +106,25 @@ func (h *ApiHandler) handleConfigHistory(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, history)
 }
 
-// handleCurrentConfigs returns the currently active proxy configurations
-func (h *ApiHandler) handleCurrentConfigs(w http.ResponseWriter, r *http.Request) {
+// handleConfigs returns all proxy configurations from the database
+func (h *ApiHandler) handleConfigs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Retrieve active IDs from the global thread-safe store
-	activeIDs := core.GlobalVar.ConfigGetAll()
+	var configs []core.ProxyConfigRow
+	if err := h.db.Order("created_at DESC").Find(&configs).Error; err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch configs", err)
+		return
+	}
 
-	var fullConfigs []any = make([]any, 0)
+	var fullConfigs []any = make([]any, 0, len(configs))
 
-	// Fetch full data for each active ID from database
-	for _, id := range activeIDs {
-		configRow, err := core.GetConfigRowByID(h.db, id)
-		if err != nil || configRow == nil {
-			// Skip IDs that aren't found or have errors to avoid breaking the whole list
-			continue
-		}
+	for _, configRow := range configs {
+		id := configRow.ID
 
-		// Get the runtime ProxyConfig from GlobalVarStore
+		// Get the runtime ProxyConfig from GlobalVarStore if active
 		proxyConfig := core.GlobalVar.GetProxyConfig(id)
 
 		// Check if proxy server is active
@@ -147,6 +145,16 @@ func (h *ApiHandler) handleCurrentConfigs(w http.ResponseWriter, r *http.Request
 		// Add runtime proxy config details if available
 		if proxyConfig != nil {
 			fullConfig["target_url"] = proxyConfig.TargetURL.String()
+			fullConfig["truncate_log_body"] = proxyConfig.TruncateLogBody
+		} else {
+			// Fallback for non-active configs: try to extract target_url from parsedJSON
+			if m, ok := parsedJSON.(map[string]any); ok {
+				if target, ok := m["target"].(string); ok {
+					fullConfig["target_url"] = target
+				} else if target, ok := m["Target"].(string); ok {
+					fullConfig["target_url"] = target
+				}
+			}
 		}
 
 		fullConfigs = append(fullConfigs, fullConfig)

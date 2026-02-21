@@ -42,20 +42,20 @@ func TestHandleConfigs(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	// 4. Test GET /api/configs/current
+	// 4. Test GET /api/configs
 	core.GlobalVar.ConfigClear()
 	core.GlobalVar.ConfigAdd(config1.ID)
 
-	req = httptest.NewRequest("GET", "/api/configs/current", nil)
+	req = httptest.NewRequest("GET", "/api/configs", nil)
 	w = httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
-	var current []any
-	json.NewDecoder(w.Body).Decode(&current)
-	if len(current) != 1 {
-		t.Errorf("Expected 1 current config, got %d", len(current))
+	var configs []any
+	json.NewDecoder(w.Body).Decode(&configs)
+	if len(configs) != 2 {
+		t.Errorf("Expected 2 configs, got %d", len(configs))
 	}
 
 	// 5. Test GET /api/configs/{id}/sessions

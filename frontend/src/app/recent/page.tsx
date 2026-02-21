@@ -26,6 +26,12 @@ import { WithConfigsRecent } from "./_components/with-configs-recent";
 function RecentPageContent() {
   const { allConfigs } = useGlobal();
   const { selectedConfigId, setSelectedConfigId } = useConfig();
+
+  const activeConfigs = React.useMemo(
+    () => allConfigs.filter((c) => c.is_proxyserver_active),
+    [allConfigs],
+  );
+
   const [startTime, setStartTime] = React.useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("recent_start_time");
@@ -76,8 +82,8 @@ function RecentPageContent() {
     setStartTime(Date.now());
   };
 
-  // Show no configs state if no configs available
-  if (allConfigs.length === 0) {
+  // Show no configs state if no active configs available
+  if (activeConfigs.length === 0) {
     return (
       <AppContainer>
         <AppHeader>
@@ -101,7 +107,7 @@ function RecentPageContent() {
             {headTitle}
           </h1>
           <ConfigSelector
-            configs={allConfigs}
+            configs={activeConfigs}
             selectedConfigId={selectedConfigId}
             onConfigChange={setSelectedConfigId}
           />

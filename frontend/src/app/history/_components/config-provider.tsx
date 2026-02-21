@@ -54,9 +54,18 @@ function ConfigProviderInner({
 
     // Defaulting logic: If no config_id in URL, use the first one available
     if (allConfigs.length > 0) {
-      const firstConfigId = allConfigs[0].config_row.ID;
-      setSelectedConfigIdState(firstConfigId);
-      updateURLConfigId(firstConfigId);
+      let defaultId = allConfigs[0].config_row.ID;
+
+      // For recent mode, try to find the first active config
+      if (mode === "recent") {
+        const activeConfig = allConfigs.find((c) => c.is_proxyserver_active);
+        if (activeConfig) {
+          defaultId = activeConfig.config_row.ID;
+        }
+      }
+
+      setSelectedConfigIdState(defaultId);
+      updateURLConfigId(defaultId);
     }
   }, [searchParams, allConfigs, updateURLConfigId, selectedConfigId]);
 

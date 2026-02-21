@@ -23,7 +23,7 @@ export function GlobalAppProvider({ children }: { children: React.ReactNode }) {
     isLoading: isConfigsLoading,
     error: configsError,
     mutate: mutateConfigs,
-  } = useSWR<ProxyConfig[]>("/api/configs/current", fetcher, {
+  } = useSWR<ProxyConfig[]>("/api/configs", fetcher, {
     revalidateOnFocus: false,
   });
 
