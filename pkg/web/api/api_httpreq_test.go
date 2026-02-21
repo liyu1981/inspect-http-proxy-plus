@@ -70,7 +70,7 @@ func TestHandleHttpReq_JSON(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected body to be a string (base64), got %T", result["body"])
 	}
-	
+
 	if bodyVal != "b2s=" { // "ok" in base64
 		t.Errorf("Expected response body 'b2s=' (base64 of 'ok'), got %v", bodyVal)
 	}

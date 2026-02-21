@@ -50,14 +50,14 @@ export function HttpResponseViewer({
   // For display as text, we need to decode it if it looks like base64.
   const displayBody = useMemo(() => {
     if (!body) return "";
-    
-    const isTextLike = 
-      contentType.startsWith("text/") || 
-      contentType.includes("json") || 
-      contentType.includes("javascript") || 
+
+    const isTextLike =
+      contentType.startsWith("text/") ||
+      contentType.includes("json") ||
+      contentType.includes("javascript") ||
       contentType.includes("xml") ||
       contentType.includes("html");
-    
+
     if (isTextLike) {
       try {
         // Simple base64 detection
