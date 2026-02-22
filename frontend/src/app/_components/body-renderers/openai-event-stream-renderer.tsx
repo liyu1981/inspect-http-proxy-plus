@@ -1,7 +1,9 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { JsonEditor } from "@/app/_components/json-editor";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BodyRenderer, BodyRendererProps } from "./types";
 
@@ -93,10 +95,32 @@ const OpenAiEventStreamRendererComponent = ({ body }: BodyRendererProps) => {
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         {selectedIndex !== null ? (
           <div className="h-full flex flex-col">
-            <div className="px-4 py-2 bg-muted/30 border-b flex justify-between items-center shrink-0">
+            <div className="px-4 py-1.5 bg-muted/30 border-b flex justify-between items-center shrink-0">
               <span className="text-[10px] font-bold uppercase text-muted-foreground">
                 Chunk #{selectedIndex + 1} Metadata
               </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  disabled={selectedIndex === 0}
+                  onClick={() => setSelectedIndex(selectedIndex - 1)}
+                  title="Previous chunk"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  disabled={selectedIndex === chunks.length - 1}
+                  onClick={() => setSelectedIndex(selectedIndex + 1)}
+                  title="Next chunk"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
             <div className="flex-1 overflow-auto">
               <JsonEditor
