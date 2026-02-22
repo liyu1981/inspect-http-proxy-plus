@@ -1,7 +1,9 @@
 "use client";
 
+import { endOfDay, startOfDay, subDays } from "date-fns";
 import { RefreshCw, Search } from "lucide-react";
 import * as React from "react";
+import { DateTimeRangePicker } from "@/components/date-time-range-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,8 +14,6 @@ import {
 import { fetcher } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { DateTimeRange, ProxySessionStub } from "@/types";
-import { DateTimeRangePicker } from "@/components/date-time-range-picker";
-import { subDays, startOfDay, endOfDay } from "date-fns";
 import { AppContainer } from "../_components/app-container";
 import { AppHeader } from "../_components/app-header";
 import { useGlobal } from "../_components/global-app-context";
@@ -44,7 +44,7 @@ function InspectPageContent() {
         q && q.length >= 3
           ? `/api/sessions/search/${configId}`
           : `/api/sessions/recent/${configId}`;
-      
+
       if (dateRange.from) {
         params.set("since", dateRange.from.toISOString());
       }

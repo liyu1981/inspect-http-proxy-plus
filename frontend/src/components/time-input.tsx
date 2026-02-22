@@ -1,8 +1,8 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
 import { format, parse } from "date-fns";
 import * as React from "react";
+import { Input } from "@/components/ui/input";
 
 interface TimeInputProps {
   value?: Date;
