@@ -34,13 +34,13 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
+  { name: "today", label: "Today" },
+  { name: "last3", label: "Last 3 days" },
   { name: "last7", label: "Last 7 days" },
   { name: "last14", label: "Last 14 days" },
   { name: "last30", label: "Last 30 days" },
-  { name: "thisWeek", label: "This Week" },
-  { name: "lastWeek", label: "Last Week" },
-  { name: "thisMonth", label: "This Month" },
-  { name: "lastMonth", label: "Last Month" },
+  { name: "last180", label: "Last 180 days" },
+  { name: "lifetime", label: "Life time" },
 ];
 
 export interface DateTimeRangePickerProps {
@@ -57,7 +57,7 @@ const formatDateTime = (
   locale: Locale = enUS,
 ): string => {
   if (!date || !isValid(date)) return "Select date";
-  return format(date, "PPP p", { locale });
+  return format(date, "MMM d, HH:mm", { locale });
 };
 
 const getDateAdjustedForTimezone = (
@@ -65,6 +65,10 @@ const getDateAdjustedForTimezone = (
 ): Date | undefined => {
   if (!dateInput) return undefined;
   if (typeof dateInput === "string") {
+    // Check if it's an ISO string (contains T or Z)
+    if (dateInput.includes("T") || dateInput.includes("Z")) {
+      return new Date(dateInput);
+    }
     const parts = dateInput.split("-").map((part) => Number.parseInt(part, 10));
     return new Date(parts[0], parts[1] - 1, parts[2]);
   }
@@ -103,43 +107,18 @@ export const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({
       switch (presetName) {
         case "today":
           return { from: today, to: endToday };
-        case "yesterday": {
-          const yesterday = subDays(today, 1);
-          return { from: yesterday, to: endOfDay(yesterday) };
-        }
+        case "last3":
+          return { from: subDays(today, 2), to: endToday };
         case "last7":
           return { from: subDays(today, 6), to: endToday };
         case "last14":
           return { from: subDays(today, 13), to: endToday };
         case "last30":
           return { from: subDays(today, 29), to: endToday };
-        case "thisWeek":
-          return {
-            from: startOfWeek(today, { weekStartsOn: 0 }),
-            to: endToday,
-          };
-        case "lastWeek": {
-          const lastWeekStart = startOfWeek(subDays(today, 7), {
-            weekStartsOn: 0,
-          });
-          const lastWeekEnd = endOfWeek(lastWeekStart, { weekStartsOn: 0 });
-          return {
-            from: lastWeekStart,
-            to: lastWeekEnd,
-          };
-        }
-        case "thisMonth":
-          return {
-            from: startOfMonth(today),
-            to: endToday,
-          };
-        case "lastMonth": {
-          const lastMonth = subMonths(today, 1);
-          return {
-            from: startOfMonth(lastMonth),
-            to: endOfMonth(lastMonth),
-          };
-        }
+        case "last180":
+          return { from: subDays(today, 179), to: endToday };
+        case "lifetime":
+          return { from: undefined, to: undefined };
         default:
           throw new Error(`Unknown date range preset: ${presetName}`);
       }
@@ -234,18 +213,20 @@ export const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({
         <Button
           variant="outline"
           className={cn(
-            "w-full sm:w-[300px] justify-start text-left text-[11px] font-normal text-wrap",
+            "w-fit min-w-[280px] justify-start text-left text-[11px] font-normal whitespace-nowrap",
             className,
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {formatDateTime(range.from, locale)}
-          {range.to && (
-            <>
-              <ChevronRightIcon className="mx-2 h-4 w-4" />
-              {formatDateTime(range.to, locale)}
-            </>
-          )}
+          <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+          <div className="flex items-center gap-1">
+            <span>{formatDateTime(range.from, locale)}</span>
+            {range.to && (
+              <>
+                <ChevronRightIcon className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                <span>{formatDateTime(range.to, locale)}</span>
+              </>
+            )}
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align={align} sideOffset={4}>

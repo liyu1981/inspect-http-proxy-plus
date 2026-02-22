@@ -11,3 +11,4 @@
 - CGO is necessary as we need fts5 support for sqlite3
 - Do NOT scan the `design` folder for pending tasks or issues; only rely on GitHub issues or explicit user instructions.
 - When create github pr, remember to mention the issue number in pr messsage.
+- Before create github pr, do `go fmt ./...` in project root, and `pnpm format` in 'frontend' folder

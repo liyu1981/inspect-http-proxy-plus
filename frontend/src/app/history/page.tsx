@@ -115,6 +115,12 @@ function InspectPageContent() {
             selectedConfigId={selectedConfigId}
             onConfigChange={setSelectedConfigId}
           />
+          <DateTimeRangePicker
+            initialDateFrom={dateRange.from}
+            initialDateTo={dateRange.to}
+            onUpdate={({ range }) => setDateRange(range)}
+            className="ml-4 w-auto"
+          />
           <div className="relative max-w-sm w-full ml-4">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -124,12 +130,6 @@ function InspectPageContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <DateTimeRangePicker
-            initialDateFrom={dateRange.from}
-            initialDateTo={dateRange.to}
-            onUpdate={({ range }) => setDateRange(range)}
-            className="w-auto"
-          />
         </div>
         <div className="flex items-center gap-4">
           <Tooltip>
