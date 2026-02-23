@@ -25,6 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ProxyConfig } from "@/types";
 import { useGlobal } from "../../_components/global-app-context";
@@ -86,6 +92,7 @@ export function SavedConfigsTab() {
           <TableHeader>
             <TableRow>
               <TableHead>Configuration (Listen 🠞 Target)</TableHead>
+              <TableHead>Config ID</TableHead>
               <TableHead>Sessions</TableHead>
               <TableHead>Created At</TableHead>
               <TableHead>Status</TableHead>
@@ -117,6 +124,23 @@ export function SavedConfigsTab() {
                         {config.config_row.SourcePath}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs max-w-[100px] truncate">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link
+                          href={`/history?config_id=${config.id}`}
+                          className="hover:underline text-blue-500"
+                        >
+                          {config.id.length > 10
+                            ? `${config.id.slice(0, 5)}...${config.id.slice(-5)}`
+                            : config.id}
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{config.id}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
