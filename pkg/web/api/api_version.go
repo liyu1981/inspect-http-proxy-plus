@@ -13,7 +13,11 @@ func (h *ApiHandler) handleVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	latestVersion, latestVersionTag := core.GlobalVar.GetLatestVersion()
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"version": core.Version,
+		"version":            core.Version,
+		"latest_version":     latestVersion,
+		"latest_version_tag": latestVersionTag,
 	})
 }

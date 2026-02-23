@@ -25,4 +25,12 @@ func TestHandleVersion(t *testing.T) {
 	if result["version"] != core.Version {
 		t.Errorf("Expected version %s, got %s", core.Version, result["version"])
 	}
+
+	// It should also contain latest_version and latest_version_tag (even if empty)
+	if _, exists := result["latest_version"]; !exists {
+		t.Errorf("Expected latest_version to exist in response")
+	}
+	if _, exists := result["latest_version_tag"]; !exists {
+		t.Errorf("Expected latest_version_tag to exist in response")
+	}
 }

@@ -12,6 +12,8 @@ type GlobalVarStore struct {
 	config_ids        []string
 	id_to_config      map[string]*ProxyConfig
 	id_to_proxyserver map[string]*http.Server
+	latestVersion     string
+	latestVersionTag  string
 }
 
 // GlobalVar is the shared instance of the configuration store.
@@ -251,4 +253,23 @@ func (g *GlobalVarStore) ClearProxyServers() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.id_to_proxyserver = make(map[string]*http.Server)
+}
+
+// ====================
+// Version Methods
+// ====================
+
+// SetLatestVersion stores the latest version information.
+func (g *GlobalVarStore) SetLatestVersion(version, tag string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.latestVersion = version
+	g.latestVersionTag = tag
+}
+
+// GetLatestVersion returns the stored latest version and its tag.
+func (g *GlobalVarStore) GetLatestVersion() (string, string) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.latestVersion, g.latestVersionTag
 }

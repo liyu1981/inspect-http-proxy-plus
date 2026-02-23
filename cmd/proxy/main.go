@@ -189,6 +189,8 @@ func main() {
 		return
 	}
 
+	core.CheckForUpdates()
+
 	// 1. Load the config file (bootstrap for db-path and initial settings)
 	loadConfig()
 

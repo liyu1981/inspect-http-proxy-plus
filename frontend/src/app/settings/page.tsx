@@ -71,6 +71,8 @@ const formatBytes = (bytes: number) => {
 export default function SettingsPage() {
   const [sysConfig, setSysConfig] = useState<SysConfig | null>(null);
   const [appVersion, setAppVersion] = useState<string>("");
+  const [latestVersion, setLatestVersion] = useState<string>("");
+  const [latestVersionTag, setLatestVersionTag] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +90,8 @@ export default function SettingsPage() {
         ]);
         setSysConfig(configRes.data);
         setAppVersion(versionRes.data.version);
+        setLatestVersion(versionRes.data.latest_version);
+        setLatestVersionTag(versionRes.data.latest_version_tag);
         setLogLevel(configRes.data.log_level);
         setApiAddr(configRes.data.api_addr);
         setMaxSessionsRetain(
@@ -167,6 +171,35 @@ export default function SettingsPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {appVersion &&
+            latestVersion &&
+            appVersion !== "dev" &&
+            appVersion.replace(/^v/, "") !==
+              latestVersion.replace(/^v/, "") && (
+              <Alert className="border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                <Network className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between w-full">
+                  <span>
+                    A new version of Inspect HTTP Proxy Plus is available:{" "}
+                    <strong>{latestVersionTag}</strong>
+                  </span>
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 text-yellow-600 dark:text-yellow-400 font-bold"
+                    asChild
+                  >
+                    <a
+                      href="https://github.com/liyu1981/inspect-http-proxy-plus/releases/latest"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Download Latest
+                    </a>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
 
           {!loading && !error && sysConfig && (
             <Tabs
