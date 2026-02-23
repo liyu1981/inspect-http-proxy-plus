@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { Database, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -30,7 +31,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ProxyConfig } from "@/types";
 import { useGlobal } from "../../_components/global-app-context";

@@ -192,7 +192,6 @@ export function BottomPanel({
                 <span title={tab.label}>{tab.label}</span>
                 {tab.closeable !== false && (
                   <a
-                    // biome-ignore lint/a11y/useValidAnchor: a is used as button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleCloseTab(tab.id);

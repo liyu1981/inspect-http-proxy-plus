@@ -34,7 +34,7 @@ const OllamaStreamRendererComponent = ({ body }: BodyRendererProps) => {
           json: json,
           content: content,
         });
-      } catch (e) {
+      } catch (_e) {
         // Skip invalid JSON
       }
     }

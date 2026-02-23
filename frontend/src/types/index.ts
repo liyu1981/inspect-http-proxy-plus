@@ -1,9 +1,9 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: necessary */
 export interface DateTimeRange {
   from: Date | undefined;
   to: Date | undefined;
 }
 
-/** biome-ignore-all lint/suspicious/noExplicitAny: necessary */
 export interface ProxySession {
   ID: string;
   ConfigID: string;

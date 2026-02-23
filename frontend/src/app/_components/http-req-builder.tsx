@@ -142,7 +142,6 @@ export default function HttpReqBuilder() {
       // 4. Prepare Headers
       const enabledHeaders = headers
         .filter((h) => h.enabled && h.key.trim())
-        // biome-ignore lint/performance/noAccumulatingSpread: skip
         .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
 
       let res: any;
@@ -195,7 +194,6 @@ export default function HttpReqBuilder() {
           },
         },
       });
-      // biome-ignore lint/suspicious/noExplicitAny: error
     } catch (err: any) {
       const hash = await calculateRequestHash(currentRequest);
       const errorMessage =

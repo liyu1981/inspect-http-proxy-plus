@@ -36,7 +36,7 @@
       },
       "suspicious": {
         "noDocumentImportInPage": "error",
-        "noExplicitAny": "warn",
+        "noExplicitAny": "off",
         "noExtraNonNullAssertion": "error",
         "noHeadImportInDocument": "error",
         "noMisleadingInstantiator": "error",

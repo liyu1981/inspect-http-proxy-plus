@@ -290,7 +290,6 @@ export const responseStateAtom = (hash: string) =>
   });
 
 // Atom for clearing all cached responses
-// biome-ignore lint/correctness/noUnusedFunctionParameters: jotai
 export const clearAllResponsesAtom = atom(null, async (get, set) => {
   set(responseMapAtom, new Map());
   await clearAllResponsesFromDB();

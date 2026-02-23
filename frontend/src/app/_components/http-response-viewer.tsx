@@ -69,7 +69,7 @@ export function HttpResponseViewer({
           }
           return new TextDecoder().decode(bytes);
         }
-      } catch (e) {
+      } catch (_e) {
         // Fallback to raw if decoding fails
       }
     }
@@ -95,7 +95,7 @@ export function HttpResponseViewer({
           }
           const byteArray = new Uint8Array(byteNumbers);
           blob = new Blob([byteArray], { type: contentType });
-        } catch (e) {
+        } catch (_e) {
           blob = new Blob([body], { type: "text/plain" });
         }
       } else {

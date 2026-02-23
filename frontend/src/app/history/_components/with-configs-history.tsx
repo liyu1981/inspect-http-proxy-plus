@@ -29,7 +29,7 @@ interface WithConfigsHistoryProps {
   onSearchQueryChange: (val: string) => void;
   onFilterMethodChange: (val: string) => void;
   onFilterStatusChange: (val: string) => void;
-  initLoadSessions?: (
+  loadSessions?: (
     configId: string,
     params: URLSearchParams,
   ) => Promise<SessionListResponse>;
@@ -50,7 +50,7 @@ export function WithConfigsHistory({
   onSearchQueryChange,
   onFilterMethodChange,
   onFilterStatusChange,
-  initLoadSessions,
+  loadSessions,
   mergeSessions,
 }: WithConfigsHistoryProps) {
   const [selectedSessionId, setSelectedSessionId] = React.useState<
@@ -69,6 +69,13 @@ export function WithConfigsHistory({
   const [offset, setOffset] = React.useState<number>(0);
   const [limit] = React.useState<number>(50);
   const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
+
+  // Reset offset when filters change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: necessary
+  React.useEffect(() => {
+    setOffset(0);
+    setAllLoadedSessions([]);
+  }, [debouncedSearchQuery, filterMethod, filterStatus, dateRange]);
 
   // Build query string
   const params = React.useMemo(() => {
@@ -105,11 +112,8 @@ export function WithConfigsHistory({
     mutate,
     isValidating,
   } = useSWR<SessionListResponse>(
-    configId && initLoadSessions
-      ? ["sessions", configId, params.toString()]
-      : null,
-    ([_, id, p]) =>
-      initLoadSessions!(id as string, new URLSearchParams(p as any)),
+    configId && loadSessions ? ["sessions", configId, params.toString()] : null,
+    ([_, id, p]) => loadSessions!(id as string, new URLSearchParams(p as any)),
     {
       revalidateOnFocus: false,
     },

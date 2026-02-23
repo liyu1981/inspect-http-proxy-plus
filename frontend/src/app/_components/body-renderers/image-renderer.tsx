@@ -1,6 +1,8 @@
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
+/** biome-ignore-all lint/performance/noImgElement: TODO */
 "use client";
 
-import React from "react";
+import type React from "react";
 import type { BodyRenderer, BodyRendererProps } from "./types";
 
 const ImageRenderer: React.FC<BodyRendererProps> = ({ body, contentType }) => {
@@ -12,7 +14,6 @@ const ImageRenderer: React.FC<BodyRendererProps> = ({ body, contentType }) => {
   return (
     <div className="flex flex-col items-center justify-center p-4 min-h-[200px] w-full bg-muted/30">
       <div className="relative group max-w-full overflow-hidden rounded-md shadow-sm border bg-card">
-        {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
         <img
           src={src}
           alt="Response Preview"

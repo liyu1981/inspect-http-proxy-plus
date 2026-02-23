@@ -3,14 +3,10 @@
 import {
   addMonths,
   endOfDay,
-  endOfMonth,
-  endOfWeek,
   format,
   isEqual,
   isValid,
   startOfDay,
-  startOfMonth,
-  startOfWeek,
   subDays,
   subMonths,
 } from "date-fns";
@@ -25,7 +21,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { DateTimeRange } from "@/types";
+import type { DateTimeRange } from "@/types";
 import { DateTimeInput } from "./date-time-input";
 
 interface Preset {
@@ -185,14 +181,6 @@ export const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({
     </Button>
   );
 
-  const areRangesEqual = (a?: DateTimeRange, b?: DateTimeRange): boolean => {
-    if (!a || !b) return a === b;
-    return (
-      isEqual(a.from || new Date(), b.from || new Date()) &&
-      isEqual(a.to || new Date(), b.to || new Date())
-    );
-  };
-
   React.useEffect(() => {
     if (isOpen) {
       openedRangeRef.current = range;
@@ -219,11 +207,17 @@ export const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({
         >
           <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
           <div className="flex items-center gap-1">
-            <span>{formatDateTime(range.from, locale)}</span>
-            {range.to && (
+            {range.from === undefined && range.to === undefined ? (
+              <span>Lifetime</span>
+            ) : (
               <>
-                <ChevronRightIcon className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                <span>{formatDateTime(range.to, locale)}</span>
+                <span>{formatDateTime(range.from, locale)}</span>
+                {range.to && (
+                  <>
+                    <ChevronRightIcon className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                    <span>{formatDateTime(range.to, locale)}</span>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -318,9 +312,7 @@ export const DateTimeRangePicker: React.FC<DateTimeRangePickerProps> = ({
           <Button
             onClick={() => {
               setIsOpen(false);
-              if (!areRangesEqual(range, openedRangeRef.current)) {
-                onUpdate?.({ range });
-              }
+              onUpdate?.({ range });
             }}
           >
             Update

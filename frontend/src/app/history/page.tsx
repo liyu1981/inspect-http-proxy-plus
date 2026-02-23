@@ -1,6 +1,5 @@
 "use client";
 
-import { endOfDay, startOfDay, subDays } from "date-fns";
 import { RefreshCw, Search } from "lucide-react";
 import * as React from "react";
 import { DateTimeRangePicker } from "@/components/date-time-range-picker";
@@ -33,11 +32,11 @@ function HistoryPageContent() {
   const [filterMethod, setFilterMethod] = React.useState("");
   const [filterStatus, setFilterStatus] = React.useState("");
   const [dateRange, setDateRange] = React.useState<DateTimeRange>({
-    from: startOfDay(subDays(new Date(), 6)),
-    to: endOfDay(new Date()),
+    from: undefined,
+    to: undefined,
   });
 
-  const initLoadSessions = React.useCallback(
+  const loadSessions = React.useCallback(
     async (configId: string, params: URLSearchParams) => {
       const q = params.get("q");
       const apiPath =
@@ -200,7 +199,7 @@ function HistoryPageContent() {
           onSearchQueryChange={setSearchQuery}
           onFilterMethodChange={setFilterMethod}
           onFilterStatusChange={setFilterStatus}
-          initLoadSessions={initLoadSessions}
+          loadSessions={loadSessions}
           mergeSessions={mergeSessions}
         />
       </div>
