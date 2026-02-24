@@ -80,7 +80,46 @@ This script will concurrently run the Go backend and the Next.js frontend, allow
 -   `--log-level <level>`: Set log level (debug, info, warn, error, fatal, panic, disabled).
 -   `--config <path>`: Path to a `.toml` configuration file.
 
-### Proxy Specifications
+### Common Scenarios
+
+#### 1. Quick Debugging with In-Memory DB
+Best for one-time usage when you don't need persistent history.
+```bash
+ihpp --in-memory http://localhost:8080
+```
+This starts a proxy at `:20003` (default) targeting `http://localhost:8080`.
+
+#### 2. Managing Multiple Services
+Specify multiple proxies directly on the command line.
+```bash
+ihpp :3001,http://localhost:8081 :3002,http://localhost:8082
+```
+This manages two proxies simultaneously through a single dashboard at `:20000`.
+
+#### 3. Persistent Configuration via File
+For complex or repetitive setups, use a TOML configuration file.
+```bash
+ihpp --config my_proxies.toml
+```
+
+Example `my_proxies.toml`:
+```toml
+[server]
+api-addr = ":20000"
+db-path = "./my_logs.db"
+
+[[proxies]]
+name = "Auth Service"
+listen = ":8001"
+target = "http://localhost:5001"
+
+[[proxies]]
+name = "Payment Service"
+listen = ":8002"
+target = "http://localhost:5002"
+```
+
+### Proxy Specification Format
 
 Specify one or more proxies as positional arguments:
 

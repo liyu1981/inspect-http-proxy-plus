@@ -9,7 +9,7 @@ Run the binary with no arguments to start the dashboard:
 ./ihpp
 ```
 
-By default, the UI will be available at [http://localhost:20003](http://localhost:20003).
+By default, the UI will be available at [http://localhost:20000](http://localhost:20000).
 
 ## 2. Create your first Proxy
 Once in the dashboard:

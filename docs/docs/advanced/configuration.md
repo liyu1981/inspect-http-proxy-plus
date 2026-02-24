@@ -8,8 +8,8 @@ A typical configuration looks like this:
 
 ```toml
 [server]
-listen = ":20003"
-db_path = "~/.proxy/proxy_logs.db"
+api-addr = ":20000"
+db-path = "~/.proxy/proxy_logs.db"
 
 [[proxies]]
 name = "Production API"
@@ -25,8 +25,8 @@ target = "http://localhost:3000"
 ## Structure
 
 ### [server]
-- `listen`: (String) The UI management address.
-- `db_path`: (String) Absolute path to the SQLite database.
+- `api-addr`: (String) The UI management address.
+- `db-path`: (String) Absolute path to the SQLite database.
 
 ### [[proxies]]
 This is an array of tables. You can define multiple proxies.
