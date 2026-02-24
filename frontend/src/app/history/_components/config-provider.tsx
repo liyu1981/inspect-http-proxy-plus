@@ -40,38 +40,61 @@ function ConfigProviderInner({
     [router, searchParams, mode],
   );
 
-  // Initialize from URL on mount or when configs change
+  // Initialize from URL or localStorage on mount or when configs change
   React.useEffect(() => {
+    if (allConfigs.length === 0) return;
+
     const configIdFromUrl = searchParams.get("config_id");
+    const persistentId = localStorage.getItem("selected-config-id");
 
     if (configIdFromUrl) {
-      // If the state is already synced, don't update to avoid unnecessary re-renders
-      if (selectedConfigId !== configIdFromUrl) {
-        setSelectedConfigIdState(configIdFromUrl);
-      }
-      return;
-    }
-
-    // Defaulting logic: If no config_id in URL, use the first one available
-    if (allConfigs.length > 0) {
-      let defaultId = allConfigs[0].config_row.ID;
-
-      // For recent mode, try to find the first active config
-      if (mode === "recent") {
-        const activeConfig = allConfigs.find((c) => c.is_proxyserver_active);
-        if (activeConfig) {
-          defaultId = activeConfig.config_row.ID;
+      // Validate that it exists
+      const exists = allConfigs.some(
+        (c) => c.config_row.ID === configIdFromUrl,
+      );
+      if (exists) {
+        if (selectedConfigId !== configIdFromUrl) {
+          setSelectedConfigIdState(configIdFromUrl);
         }
+        // Always sync to localStorage if it's in URL and valid
+        if (persistentId !== configIdFromUrl) {
+          localStorage.setItem("selected-config-id", configIdFromUrl);
+        }
+        return;
       }
-
-      setSelectedConfigIdState(defaultId);
-      updateURLConfigId(defaultId);
+      // If configId from URL doesn't exist, proceed to defaults
     }
+
+    // No valid ID in URL, check localStorage
+    if (persistentId) {
+      const exists = allConfigs.some((c) => c.config_row.ID === persistentId);
+      if (exists) {
+        setSelectedConfigIdState(persistentId);
+        updateURLConfigId(persistentId);
+        return;
+      }
+    }
+
+    // Defaulting logic: If no config_id in URL or localStorage, use the first one available
+    let defaultId = allConfigs[0].config_row.ID;
+
+    // For recent mode, try to find the first active config
+    if (mode === "recent") {
+      const activeConfig = allConfigs.find((c) => c.is_proxyserver_active);
+      if (activeConfig) {
+        defaultId = activeConfig.config_row.ID;
+      }
+    }
+
+    setSelectedConfigIdState(defaultId);
+    updateURLConfigId(defaultId);
+    localStorage.setItem("selected-config-id", defaultId);
   }, [searchParams, allConfigs, updateURLConfigId, selectedConfigId, mode]);
 
   const setSelectedConfigId = React.useCallback(
     (id: string) => {
       setSelectedConfigIdState(id);
+      localStorage.setItem("selected-config-id", id);
       const params = new URLSearchParams(searchParams.toString());
       params.set("config_id", id);
       router.push(`/${mode}?${params.toString()}`, { scroll: false });

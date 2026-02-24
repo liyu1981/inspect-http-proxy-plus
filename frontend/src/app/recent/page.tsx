@@ -107,7 +107,7 @@ function RecentPageContent() {
             {headTitle}
           </h1>
           <ConfigSelector
-            configs={activeConfigs}
+            configs={allConfigs}
             selectedConfigId={selectedConfigId}
             onConfigChange={setSelectedConfigId}
           />
