@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -328,5 +329,59 @@ func (h *ApiHandler) handleSessionDetail(w http.ResponseWriter, r *http.Request)
 		"request_headers":  reqH,
 		"response_headers": respH,
 		"query_parameters": qp,
+	})
+}
+
+// handleBatchSessions returns detailed information about multiple sessions
+func (h *ApiHandler) handleBatchSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		IDs []string `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"sessions": []any{},
+		})
+		return
+	}
+
+	sessions, err := core.GetSessionsByIDs(h.db, req.IDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to fetch sessions", err)
+		return
+	}
+
+	type sessionDetail struct {
+		Session         core.ProxySessionRow `json:"session"`
+		RequestHeaders  http.Header          `json:"request_headers"`
+		ResponseHeaders http.Header          `json:"response_headers"`
+		QueryParameters any                  `json:"query_parameters"`
+	}
+
+	details := make([]sessionDetail, 0, len(sessions))
+	for _, s := range sessions {
+		reqH, _ := s.ParseRequestHeaders()
+		respH, _ := s.ParseResponseHeaders()
+		qp, _ := s.ParseQueryParameters()
+
+		details = append(details, sessionDetail{
+			Session:         s,
+			RequestHeaders:  reqH,
+			ResponseHeaders: respH,
+			QueryParameters: qp,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"sessions": details,
 	})
 }

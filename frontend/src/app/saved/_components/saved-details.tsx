@@ -10,6 +10,7 @@ import {
   Loader2,
   Logs,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { api, fetcher } from "@/lib/api";
 import { copyToClipboard, generateCurlCommand } from "@/lib/curl-gen-util";
+import { generateLLMMarkdown } from "@/lib/llm-data-gen-util";
 import type { ProxyBookmark } from "@/types";
 import { FloatToolbar } from "../../_components/float-toolbar";
 import { TagInput } from "../../_components/tag-input";
@@ -203,6 +205,7 @@ export function SavedDetails({ id }: SavedDetailsProps) {
 
 function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
   const [copied, setCopied] = useState(false);
+  const [copiedLLM, setCopiedLLM] = useState(false);
   const [copiedToBuilder, setCopiedToBuilder] = useState(false);
   const resetRequest = useSetAtom(resetRequestAtom);
 
@@ -219,6 +222,40 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyLLM = async () => {
+    const sessionData = {
+      session: {
+        ID: bookmark.SessionID,
+        Timestamp: bookmark.Timestamp,
+        DurationMs: bookmark.DurationMs,
+        RequestMethod: bookmark.RequestMethod,
+        RequestPath: bookmark.RequestPath,
+        RequestProto: bookmark.RequestProto,
+        RequestHost: bookmark.RequestHost,
+        RequestURLFull: bookmark.RequestURLFull,
+        ResponseStatusCode: bookmark.ResponseStatusCode,
+        ResponseStatusText: bookmark.ResponseStatusText,
+        RequestBody: bookmark.RequestBody,
+        RequestBodySize: bookmark.RequestBodySize,
+        RequestContentType: bookmark.RequestContentType,
+        ResponseBody: bookmark.ResponseBody,
+        ResponseBodySize: bookmark.ResponseBodySize,
+        ResponseContentType: bookmark.ResponseContentType,
+      },
+      request_headers: bookmark.RequestHeaders,
+      response_headers: bookmark.ResponseHeaders,
+      query_parameters: bookmark.QueryParameters,
+    };
+
+    const markdown = generateLLMMarkdown(sessionData);
+
+    const success = await copyToClipboard(markdown);
+    if (success) {
+      setCopiedLLM(true);
+      setTimeout(() => setCopiedLLM(false), 2000);
     }
   };
 
@@ -301,6 +338,26 @@ function SavedSessionInfo({ bookmark }: { bookmark: ProxyBookmark }) {
             </TooltipTrigger>
             <TooltipContent side="left">
               <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyLLM}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copiedLLM ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{copiedLLM ? "Copied!" : "Copy for LLM"}</p>
             </TooltipContent>
           </Tooltip>
 

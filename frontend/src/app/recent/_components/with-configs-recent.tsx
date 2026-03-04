@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import type { ProxySessionStub, SessionListResponse } from "@/types";
 import { useSubscription } from "../../_hooks/use-subscription";
+import { BulkSelectionBar } from "../../history/_components/bulk-selection-bar";
 import { EmptySessionState } from "../../history/_components/empty-session-state";
 import { SessionDetails } from "../../history/_components/session-details";
 import { SessionList } from "../../history/_components/session-list";
@@ -45,6 +46,8 @@ export function WithConfigsRecent({
   const [selectedSessionId, setSelectedSessionId] = React.useState<
     string | null
   >(null);
+
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
   const [debouncedSearchQuery, _setDebouncedSearchQuery] = useDebounced(
     searchQuery,
@@ -174,6 +177,8 @@ export function WithConfigsRecent({
         <SessionList
           sessions={allLoadedSessions}
           selectedSessionId={selectedSessionId}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
           filterMethod={filterMethod}
           filterStatus={filterStatus}
           searchQuery={searchQuery}
@@ -197,12 +202,17 @@ export function WithConfigsRecent({
 
       {/* Details Panel */}
       <ResizablePanel defaultSize={"60%"}>
-        <div className="h-full bg-muted/10">
+        <div className="h-full bg-muted/10 relative">
           {selectedSessionId ? (
             <SessionDetails id={selectedSessionId} />
           ) : (
             <EmptySessionState />
           )}
+
+          <BulkSelectionBar
+            selectedIds={selectedIds}
+            onClearSelection={() => setSelectedIds([])}
+          />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

@@ -218,6 +218,13 @@ func GetSessionByID(db *gorm.DB, sessionID string) (*ProxySessionRow, error) {
 	return &session, err
 }
 
+// GetSessionsByIDs retrieves multiple sessions by their IDs
+func GetSessionsByIDs(db *gorm.DB, sessionIDs []string) ([]ProxySessionRow, error) {
+	var sessions []ProxySessionRow
+	err := db.Where("id IN ?", sessionIDs).Order("timestamp DESC").Find(&sessions).Error
+	return sessions, err
+}
+
 // GetErrorSessions retrieves sessions with error status codes for a specific config
 func GetErrorSessions(db *gorm.DB, configID string, limit int, offset int) ([]ProxySessionRow, error) {
 	var sessions []ProxySessionRow

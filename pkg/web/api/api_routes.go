@@ -67,6 +67,7 @@ func (h *ApiHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/sessions/search/{config_id}", h.handleSearchSessions)
 
 	// General Session Handlers
+	mux.HandleFunc("POST /api/sessions/batch", h.handleBatchSessions)
 	mux.HandleFunc("/api/sessions/{id}", h.handleSessionDetail)
 
 	// Global Statistics

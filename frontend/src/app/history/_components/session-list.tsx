@@ -1,10 +1,11 @@
 "use client";
 
 import { format, formatDistanceToNow } from "date-fns";
-import { FilterX, Loader2, X } from "lucide-react";
+import { CheckSquare, FilterX, Loader2, Square, X } from "lucide-react";
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,8 @@ import type { ProxySessionStub } from "@/types";
 interface SessionListProps {
   sessions: ProxySessionStub[];
   selectedSessionId: string | null;
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
   filterMethod: string;
   filterStatus: string;
   searchQuery: string;
@@ -43,6 +46,8 @@ interface SessionListProps {
 export function SessionList({
   sessions,
   selectedSessionId,
+  selectedIds = [],
+  onSelectionChange,
   filterMethod,
   filterStatus,
   searchQuery,
@@ -68,12 +73,41 @@ export function SessionList({
     return Array.from(statuses).sort();
   }, [sessions]);
 
+  const allSelected =
+    sessions.length > 0 && selectedIds.length === sessions.length;
+  const someSelected = selectedIds.length > 0 && !allSelected;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (onSelectionChange) {
+      onSelectionChange(checked ? sessions.map((s) => s.ID) : []);
+    }
+  };
+
+  const handleToggleSelection = (id: string) => {
+    if (onSelectionChange) {
+      if (selectedIds.includes(id)) {
+        onSelectionChange(selectedIds.filter((i) => i !== id));
+      } else {
+        onSelectionChange([...selectedIds, id]);
+      }
+    }
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto relative">
         <Table noWrapper className="border-separate border-spacing-0">
           <TableHeader className="bg-background sticky top-0 z-10">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[40px] p-0 h-16 sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_0_#e2e8f0] dark:shadow-[inset_0_-1px_0_0_#1e293b] text-center">
+                <div className="flex items-center justify-center h-full">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </div>
+              </TableHead>
               <TableHead className="w-[100px] p-0 h-16 sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_0_#e2e8f0] dark:shadow-[inset_0_-1px_0_0_#1e293b]">
                 <Select
                   value={filterStatus || "all_statuses"}
@@ -164,12 +198,14 @@ export function SessionList({
                 key={session.ID}
                 session={session}
                 isSelected={selectedSessionId === session.ID}
+                isChecked={selectedIds.includes(session.ID)}
+                onCheckToggle={() => handleToggleSelection(session.ID)}
                 onClick={() => onSessionClick(session.ID)}
               />
             ))}
             {!sessions?.length && (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center border-b">
+                <TableCell colSpan={6} className="h-24 text-center border-b">
                   No sessions found.
                 </TableCell>
               </TableRow>
@@ -217,10 +253,14 @@ export function SessionList({
 function SessionRow({
   session,
   isSelected,
+  isChecked,
+  onCheckToggle,
   onClick,
 }: {
   session: ProxySessionStub;
   isSelected: boolean;
+  isChecked: boolean;
+  onCheckToggle: () => void;
   onClick: () => void;
 }) {
   return (
@@ -231,6 +271,16 @@ function SessionRow({
       )}
       onClick={onClick}
     >
+      <TableCell
+        className="py-2 border-b text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Checkbox
+          checked={isChecked}
+          onCheckedChange={onCheckToggle}
+          aria-label={`Select session ${session.ID}`}
+        />
+      </TableCell>
       <TableCell className="py-2 border-b">
         <StatusBadge code={session.ResponseStatusCode} />
       </TableCell>

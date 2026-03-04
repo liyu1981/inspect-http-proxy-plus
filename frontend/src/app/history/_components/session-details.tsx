@@ -11,6 +11,7 @@ import {
   FileText,
   Logs,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import { api, fetcher } from "@/lib/api";
 import { copyToClipboard, generateCurlCommand } from "@/lib/curl-gen-util";
+import { generateLLMMarkdown } from "@/lib/llm-data-gen-util";
 import type { SessionDetailResponse } from "@/types";
 import { FloatToolbar } from "../../_components/float-toolbar";
 import { resetRequestAtom } from "../../_jotai/http-req";
@@ -47,6 +49,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
   const { selectedConfigId } = useConfig();
   const { allConfigs } = useGlobal();
   const [copied, setCopied] = useState(false);
+  const [copiedLLM, setCopiedLLM] = useState(false);
   const [copiedToBuilder, setCopiedToBuilder] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const resetRequest = useSetAtom(resetRequestAtom);
@@ -94,6 +97,18 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyLLM = async () => {
+    if (!data) return;
+
+    const markdown = generateLLMMarkdown(data);
+
+    const success = await copyToClipboard(markdown);
+    if (success) {
+      setCopiedLLM(true);
+      setTimeout(() => setCopiedLLM(false), 2000);
     }
   };
 
@@ -187,6 +202,26 @@ export function SessionDetails({ id }: SessionDetailsProps) {
             </TooltipTrigger>
             <TooltipContent side="left">
               <p>{copied ? "Copied!" : "Copy as cURL Command"}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyLLM}
+                className="h-9 w-9 text-primary hover:bg-primary/20"
+              >
+                {copiedLLM ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{copiedLLM ? "Copied!" : "Copy for LLM"}</p>
             </TooltipContent>
           </Tooltip>
 
