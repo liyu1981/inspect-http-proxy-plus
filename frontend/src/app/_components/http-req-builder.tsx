@@ -349,8 +349,7 @@ export default function HttpReqBuilder() {
                   <JsonEditor
                     key={body}
                     initialJson={body ? JSON.parse(body) : {}}
-                    rootFontSize={"13px"}
-                    onChangeJson={(newJson) => setBody(newJson)}
+                    onChangeJson={(newJson) => setBody(JSON.stringify(newJson))}
                   />
                 )}
                 {bodyType === "form-data" && (

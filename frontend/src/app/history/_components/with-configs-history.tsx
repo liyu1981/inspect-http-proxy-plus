@@ -163,12 +163,12 @@ export function WithConfigsHistory({
       type: string;
       ids?: string[];
     }) => {
-      console.log(
-        "received session update via subscription:",
-        type,
-        session || ids,
-        configId,
-      );
+      // console.log(
+      //   "received session update via subscription:",
+      //   type,
+      //   session || ids,
+      //   configId,
+      // );
 
       if (type === "new_session" && session) {
         if (session.ConfigID !== configId) {
@@ -197,10 +197,6 @@ export function WithConfigsHistory({
       }
     }
   }, [allLoadedSessions, selectedSessionId]);
-
-  React.useEffect(() => {
-    setSelectedSessionId(null);
-  }, []);
 
   // Check if there are more sessions to load
   const hasMore =

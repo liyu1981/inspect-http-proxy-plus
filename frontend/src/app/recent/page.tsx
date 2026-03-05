@@ -64,7 +64,6 @@ function RecentPageContent() {
 
   const mergeSessions = React.useCallback(
     (prev: ProxySessionStub[], session: ProxySessionStub) => {
-      console.log("recent try merge:", session);
       const existingIndex = prev.findIndex((s) => s.ID === session.ID);
       if (existingIndex > -1) {
         const updated = [...prev];

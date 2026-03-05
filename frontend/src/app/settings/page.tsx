@@ -377,11 +377,7 @@ export default function SettingsPage() {
                       </div>
                       {sysConfig.proxies && sysConfig.proxies.length > 0 ? (
                         <div className="rounded-md border bg-muted/50 overflow-hidden">
-                          <JsonEditor
-                            initialJson={sysConfig.proxies}
-                            rootFontSize="14px"
-                            viewOnly={true}
-                          />
+                          <JsonEditor initialJson={sysConfig.proxies as any} />
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">
@@ -400,9 +396,19 @@ export default function SettingsPage() {
             <Separator className="mb-6" />
             <div className="text-center space-y-2">
               <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-                <span className={cn('text-lg text-primary', fontdinerSwanky.className)}>ihpp</span>
+                <span
+                  className={cn(
+                    "text-lg text-primary",
+                    fontdinerSwanky.className,
+                  )}
+                >
+                  ihpp
+                </span>
                 <span className="">
-                  (<span className="text-primary">i</span>nspect <span className="text-primary">h</span>ttp <span className="text-primary">p</span>roxy <span className="text-primary">p</span>lus)
+                  (<span className="text-primary">i</span>nspect{" "}
+                  <span className="text-primary">h</span>ttp{" "}
+                  <span className="text-primary">p</span>roxy{" "}
+                  <span className="text-primary">p</span>lus)
                 </span>
               </div>
               <div className="text-sm text-muted-foreground flex items-center justify-center gap-2">

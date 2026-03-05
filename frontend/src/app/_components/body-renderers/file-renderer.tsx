@@ -1,10 +1,13 @@
 "use client";
 
 import { FileIcon } from "lucide-react";
-import React from "react";
+import type React from "react";
 import type { BodyRenderer, BodyRendererProps } from "./types";
 
-const FileRenderer: React.FC<BodyRendererProps> = ({ body, contentType }) => {
+export const FileRenderer: React.FC<BodyRendererProps> = ({
+  body,
+  contentType,
+}) => {
   return (
     <div className="flex flex-col items-center justify-center p-8 min-h-[150px] w-full bg-muted/30 rounded-md border border-dashed">
       <div className="p-4 rounded-full bg-primary/10 mb-4">
@@ -37,5 +40,4 @@ export const fileRenderer: BodyRenderer = {
       contentType.startsWith("application/vnd.openxmlformats-officedocument.");
     return isBinary;
   },
-  component: FileRenderer as any,
 };

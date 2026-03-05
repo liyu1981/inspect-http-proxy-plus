@@ -1,3 +1,6 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: TODO */
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -13,7 +16,7 @@ interface StreamChunk {
   content: string;
 }
 
-const OpenAiEventStreamRendererComponent = ({ body }: BodyRendererProps) => {
+export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const chunks = useMemo(() => {
@@ -123,11 +126,7 @@ const OpenAiEventStreamRendererComponent = ({ body }: BodyRendererProps) => {
               </div>
             </div>
             <div className="flex-1 overflow-auto">
-              <JsonEditor
-                initialJson={chunks[selectedIndex].json}
-                rootFontSize={"12px"}
-                viewOnly={true}
-              />
+              <JsonEditor initialJson={chunks[selectedIndex].json} />
             </div>
           </div>
         ) : (
@@ -153,5 +152,4 @@ export const openAiEventStreamRenderer: BodyRenderer = {
 
     return isSSE && hasOpenAiPattern;
   },
-  component: OpenAiEventStreamRendererComponent,
 };

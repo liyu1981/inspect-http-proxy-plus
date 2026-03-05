@@ -3,7 +3,7 @@
 import { JsonEditor } from "@/app/_components/json-editor";
 import type { BodyRenderer, BodyRendererProps } from "./types";
 
-const JsonRendererComponent = ({ body }: BodyRendererProps) => {
+export const JsonRenderer = ({ body }: BodyRendererProps) => {
   let json: object = {};
   try {
     // 1. Try direct parse (original behavior)
@@ -27,9 +27,7 @@ const JsonRendererComponent = ({ body }: BodyRendererProps) => {
       );
     }
   }
-  return (
-    <JsonEditor initialJson={json} rootFontSize={"13px"} viewOnly={true} />
-  );
+  return <JsonEditor initialJson={json as any} />;
 };
 
 export const jsonRenderer: BodyRenderer = {
@@ -37,5 +35,4 @@ export const jsonRenderer: BodyRenderer = {
   label: "JSON",
   priority: 100,
   match: (contentType: string) => contentType?.includes("application/json"),
-  component: JsonRendererComponent,
 };

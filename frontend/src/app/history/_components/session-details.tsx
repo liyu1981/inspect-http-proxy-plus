@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import { useSetAtom } from "jotai";
 import {
   Bookmark,
-  BookmarkCheck,
   Check,
   Clock,
   Copy,
@@ -13,12 +12,11 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
-import useSWR from "swr";
+import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 import { useGlobal } from "@/app/_components/global-app-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -54,12 +52,48 @@ export function SessionDetails({ id }: SessionDetailsProps) {
   const [bookmarked, setBookmarked] = useState(false);
   const resetRequest = useSetAtom(resetRequestAtom);
 
-  const selectedConfig = Array.isArray(allConfigs)
-    ? allConfigs.find((config) => config.id === selectedConfigId)
-    : undefined;
-  const selectedConfigObj = JSON.parse(
-    selectedConfig?.config_row.ConfigJSON || "{}",
-  );
+  // Track all pending timeouts so we can clear them on unmount
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const safeTimeout = (fn: () => void, ms: number) => {
+    const t = setTimeout(fn, ms);
+    timeoutsRef.current.push(t);
+  };
+
+  // Clear all timeouts on unmount to prevent setState on unmounted component
+  // which keeps fiber references alive
+  useEffect(() => {
+    return () => {
+      for (const t of timeoutsRef.current) {
+        clearTimeout(t);
+      }
+      timeoutsRef.current = [];
+    };
+  }, []);
+
+  // Memoize config lookup to avoid re-parsing JSON every render
+  const selectedConfigObj = useMemo(() => {
+    const selectedConfig = Array.isArray(allConfigs)
+      ? allConfigs.find((config) => config.id === selectedConfigId)
+      : undefined;
+    try {
+      return JSON.parse(selectedConfig?.config_row.ConfigJSON || "{}");
+    } catch {
+      return {};
+    }
+  }, [allConfigs, selectedConfigId]);
+
+  const { cache } = useSWRConfig();
+
+  // Evict this session's SWR cache entry on unmount.
+  // Without this, every clicked session accumulates its full response body
+  // (RequestBody + ResponseBody) in SWR's global cache indefinitely,
+  // which retains the associated fiber tree and causes the ~1GB growth per click.
+  useEffect(() => {
+    return () => {
+      cache.delete(`/api/sessions/${id}`);
+    };
+  }, [id, cache]);
 
   const { data, error } = useSWR<SessionDetailResponse>(
     `/api/sessions/${id}`,
@@ -69,26 +103,31 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     },
   );
 
+  // Stable references to session sub-objects so downstream components
+  // don't re-render due to new object identity on every SWR revalidation
+  const session = useMemo(() => data?.session, [data]);
+  const requestHeaders = useMemo(() => data?.request_headers, [data]);
+  const responseHeaders = useMemo(() => data?.response_headers, [data]);
+  const queryParameters = useMemo(() => data?.query_parameters, [data]);
+
   const handleBookmark = async () => {
     if (!data) return;
     try {
       await createBookmark(id);
       setBookmarked(true);
-      setTimeout(() => setBookmarked(false), 2000);
+      safeTimeout(() => setBookmarked(false), 2000);
     } catch (err) {
       console.error("Failed to bookmark session", err);
     }
   };
 
   const handleCopyCurl = async () => {
-    if (!data) return;
-
-    const { session, request_headers } = data;
+    if (!data || !session) return;
 
     const curlCommand = generateCurlCommand({
       method: session.RequestMethod,
       url: `http://localhost${selectedConfigObj.listen}${session.RequestPath}`,
-      headers: request_headers,
+      headers: requestHeaders as any,
       body: session.RequestBody,
       contentType: session.RequestContentType,
     });
@@ -96,7 +135,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     const success = await copyToClipboard(curlCommand);
     if (success) {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      safeTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -108,29 +147,24 @@ export function SessionDetails({ id }: SessionDetailsProps) {
     const success = await copyToClipboard(markdown);
     if (success) {
       setCopiedLLM(true);
-      setTimeout(() => setCopiedLLM(false), 2000);
+      safeTimeout(() => setCopiedLLM(false), 2000);
     }
   };
 
   const handleCopyToHttpReq = () => {
-    if (!data) return;
+    if (!data || !session) return;
 
-    const { session, request_headers } = data;
-
-    // Convert headers array to the format expected by HTTP request builder
-    const headers = Object.entries(request_headers).map(
+    const headers = Object.entries(requestHeaders ?? {}).map(
       ([key, values], index) => ({
         id: `${Date.now()}-${index}`,
         key: key,
-        value: values.join(", "), // Join multiple values with comma-space
+        value: values.join(", "),
         enabled: true,
       }),
     );
 
-    // Build the full URL
     const fullUrl = `http://${session.RequestHost}${session.RequestPath}`;
 
-    // Reset the request atom with the session data
     resetRequest({
       method: session.RequestMethod,
       url: fullUrl,
@@ -138,19 +172,16 @@ export function SessionDetails({ id }: SessionDetailsProps) {
       body: session.RequestBody || "",
     });
 
-    // Show feedback
     setCopiedToBuilder(true);
-    setTimeout(() => setCopiedToBuilder(false), 2000);
+    safeTimeout(() => setCopiedToBuilder(false), 2000);
   };
 
   if (error)
     return (
       <div className="p-8 text-destructive">Failed to load session details</div>
     );
-  if (!data)
+  if (!data || !session)
     return <div className="p-8 text-muted-foreground">Loading details...</div>;
-
-  const { session, request_headers, response_headers, query_parameters } = data;
 
   return (
     <div className="h-full flex flex-col">
@@ -233,11 +264,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
                 onClick={handleCopyToHttpReq}
                 className="h-9 w-9 text-primary hover:bg-primary/20"
               >
-                {copiedToBuilder ? (
-                  <Send className="h-4 w-4" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                <Send className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left">
@@ -346,21 +373,16 @@ export function SessionDetails({ id }: SessionDetailsProps) {
             value="request"
             className="flex-1 overflow-auto p-0 m-0 px-2"
           >
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-6">
-                <HeadersSection title="Headers" data={request_headers} />
-                <HeadersSection
-                  title="Query Parameters"
-                  data={query_parameters}
-                />
-                <BodySection
-                  title="Request Body"
-                  body={session.RequestBody}
-                  size={session.RequestBodySize}
-                  type={session.RequestContentType}
-                />
-              </div>
-            </ScrollArea>
+            <div className="p-6 space-y-6 flex flex-col h-full">
+              <HeadersSection title="Headers" data={requestHeaders} />
+              <HeadersSection title="Query Parameters" data={queryParameters} />
+              <BodySection
+                title="Request Body"
+                body={session.RequestBody}
+                size={session.RequestBodySize}
+                type={session.RequestContentType}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent
@@ -368,7 +390,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
             className="flex-1 overflow-auto p-0 m-0 px-2"
           >
             <div className="p-6 space-y-6 flex flex-col h-full">
-              <HeadersSection title="Headers" data={response_headers} />
+              <HeadersSection title="Headers" data={responseHeaders} />
               <BodySection
                 title="Response Body"
                 body={session.ResponseBody}

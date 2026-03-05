@@ -5,7 +5,10 @@
 import type React from "react";
 import type { BodyRenderer, BodyRendererProps } from "./types";
 
-const ImageRenderer: React.FC<BodyRendererProps> = ({ body, contentType }) => {
+export const ImageRenderer: React.FC<BodyRendererProps> = ({
+  body,
+  contentType,
+}) => {
   const isBase64 = /^[A-Za-z0-9+/=]+$/.test(body.trim());
   const src = isBase64
     ? `data:${contentType};base64,${body}`
@@ -36,5 +39,4 @@ export const imageRenderer: BodyRenderer = {
   label: "Image",
   priority: 10,
   match: (contentType: string) => contentType.startsWith("image/"),
-  component: ImageRenderer as any,
 };

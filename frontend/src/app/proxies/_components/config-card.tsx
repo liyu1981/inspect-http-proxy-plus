@@ -53,8 +53,6 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
     }
   };
 
-  console.log("Rendering ConfigCard with config:", config);
-
   return (
     <div className="overflow-hidden">
       <Card
@@ -152,11 +150,7 @@ export function ConfigCard({ config: initialConfig }: { config: ProxyConfig }) {
               )}
             </div>
             <div className="rounded-md border bg-muted/50 overflow-hidden">
-              <JsonEditor
-                initialJson={parsedData}
-                rootFontSize={"13px"}
-                viewOnly={true}
-              />
+              <JsonEditor initialJson={parsedData} />
             </div>
           </div>
         </CardContent>

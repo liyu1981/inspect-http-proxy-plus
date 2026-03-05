@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 
 interface HeadersSectionProps {
   title: string;
-  data: Record<string, string[]>;
+  data: Record<string, string[]> | undefined;
 }
 
 export function HeadersSection({ title, data }: HeadersSectionProps) {

@@ -49,10 +49,7 @@ export function WithConfigsRecent({
 
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
-  const [debouncedSearchQuery, _setDebouncedSearchQuery] = useDebounced(
-    searchQuery,
-    500,
-  );
+  const [debouncedSearchQuery] = useDebounced(searchQuery, 500);
 
   const [allLoadedSessions, setAllLoadedSessions] = React.useState<
     ProxySessionStub[]
@@ -67,15 +64,9 @@ export function WithConfigsRecent({
     const p = new URLSearchParams();
     p.set("limit", limit.toString());
     p.set("offset", offset.toString());
-    if (filterMethod) {
-      p.set("method", filterMethod);
-    }
-    if (filterStatus) {
-      p.set("status", filterStatus);
-    }
-    if (debouncedSearchQuery) {
-      p.set("q", debouncedSearchQuery);
-    }
+    if (filterMethod) p.set("method", filterMethod);
+    if (filterStatus) p.set("status", filterStatus);
+    if (debouncedSearchQuery) p.set("q", debouncedSearchQuery);
     return p;
   }, [limit, offset, filterMethod, filterStatus, debouncedSearchQuery]);
 
@@ -94,10 +85,8 @@ export function WithConfigsRecent({
   React.useEffect(() => {
     if (sessionList?.sessions) {
       if (offset === 0) {
-        // Initial load or filter change - replace all
         setAllLoadedSessions(sessionList.sessions);
       } else {
-        // Load more - append new sessions
         setAllLoadedSessions((prev) => {
           const newSessions = sessionList.sessions.filter(
             (newSession) => !prev.some((s) => s.ID === newSession.ID),
@@ -108,6 +97,14 @@ export function WithConfigsRecent({
       setIsLoadingMore(false);
     }
   }, [sessionList, offset]);
+
+  // Use a ref for selectedSessionId inside the subscription callback so it
+  // always reads the latest value without being a reactive dependency —
+  // this prevents the subscription from re-registering on every selection change.
+  const selectedSessionIdRef = React.useRef(selectedSessionId);
+  React.useEffect(() => {
+    selectedSessionIdRef.current = selectedSessionId;
+  }, [selectedSessionId]);
 
   useSubscription(
     "sessions",
@@ -120,45 +117,51 @@ export function WithConfigsRecent({
       type: string;
       ids?: string[];
     }) => {
-      console.log(
-        "received session update via subscription:",
-        type,
-        session || ids,
-        configId,
-      );
+      // console.log(
+      //   "received session update via subscription:",
+      //   type,
+      //   session || ids,
+      //   configId,
+      // );
 
       if (type === "new_session" && session) {
-        if (session.ConfigID !== configId) {
-          return;
-        }
-
-        // mergeSessions will merge and update allLoadedSessions
+        if (session.ConfigID !== configId) return;
         if (mergeSessions) {
           setAllLoadedSessions((prev) => mergeSessions(prev, session));
         }
       } else if (type === "delete_session" && ids) {
         setAllLoadedSessions((prev) => prev.filter((s) => !ids.includes(s.ID)));
-        if (selectedSessionId && ids.includes(selectedSessionId)) {
+        // Read from ref — no stale closure, no re-subscription
+        if (
+          selectedSessionIdRef.current &&
+          ids.includes(selectedSessionIdRef.current)
+        ) {
           setSelectedSessionId(null);
         }
       }
     },
   );
 
+  // Auto-select the first session when the list loads or changes,
+  // but only if the current selection is no longer in the list.
+  // IMPORTANT: selectedSessionId is intentionally NOT in deps here.
+  // Including it caused a render loop: setSelectedSessionId → effect re-runs
+  // → setSelectedSessionId again → SessionDetails re-renders on every subscription update.
+  // We use a ref to read the latest value without making it a reactive dependency.
   React.useEffect(() => {
     if (allLoadedSessions.length > 0) {
-      if (
-        allLoadedSessions.findIndex((s) => s.ID === selectedSessionId) === -1
-      ) {
+      const currentId = selectedSessionIdRef.current;
+      const stillExists = allLoadedSessions.some((s) => s.ID === currentId);
+      if (!stillExists) {
         setSelectedSessionId(allLoadedSessions[0].ID);
       }
     }
-  }, [allLoadedSessions, selectedSessionId]);
+  }, [allLoadedSessions]); // ← selectedSessionId removed from deps
 
   // Check if there are more sessions to load
   const hasMore =
     sessionList && sessionList.sessions
-      ? sessionList?.sessions.length === limit
+      ? sessionList.sessions.length === limit
       : false;
 
   const handleSessionClick = (id: string) => {

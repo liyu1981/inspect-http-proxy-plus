@@ -1,3 +1,6 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: TODO */
+/** biome-ignore-all lint/suspicious/noArrayIndexKey: TODO */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: TODO */
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -13,7 +16,7 @@ interface OllamaChunk {
   content: string;
 }
 
-const OllamaStreamRendererComponent = ({ body }: BodyRendererProps) => {
+export const OllamaStreamRenderer = ({ body }: BodyRendererProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const chunks = useMemo(() => {
@@ -120,11 +123,7 @@ const OllamaStreamRendererComponent = ({ body }: BodyRendererProps) => {
               </div>
             </div>
             <div className="flex-1 overflow-auto">
-              <JsonEditor
-                initialJson={chunks[selectedIndex].json}
-                rootFontSize={"12px"}
-                viewOnly={true}
-              />
+              <JsonEditor initialJson={chunks[selectedIndex].json} />
             </div>
           </div>
         ) : (
@@ -151,5 +150,4 @@ export const ollamaStreamRenderer: BodyRenderer = {
       body.trim().startsWith('{"model":') && body.includes('"created_at":')
     );
   },
-  component: OllamaStreamRendererComponent,
 };

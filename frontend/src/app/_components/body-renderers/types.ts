@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export interface BodyRendererProps {
   body: string;
   contentType: string;
@@ -15,8 +13,6 @@ export interface BodyRenderer {
    * Returns true if it supports the content type or body pattern.
    */
   match: (contentType: string, body: string) => boolean;
-  /** The React component to render the specialized view */
-  component: React.ComponentType<BodyRendererProps>;
   /** Optional priority: higher priority matches first */
   priority?: number;
 }

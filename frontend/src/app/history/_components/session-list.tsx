@@ -75,7 +75,7 @@ export function SessionList({
 
   const allSelected =
     sessions.length > 0 && selectedIds.length === sessions.length;
-  const someSelected = selectedIds.length > 0 && !allSelected;
+  // const someSelected = selectedIds.length > 0 && !allSelected;
 
   const handleSelectAll = (checked: boolean) => {
     if (onSelectionChange) {

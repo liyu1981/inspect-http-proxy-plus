@@ -161,3 +161,8 @@
     animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }
+
+.jse-main {
+  --jse-theme-color: var(--color-gray-400);
+  --jse-theme-color-highlight: var(--color-gray-500);
+}

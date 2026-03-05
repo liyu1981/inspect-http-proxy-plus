@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { findRenderer } from "@/app/_components/body-renderers/registry";
+import { useMemo, useState } from "react";
+import {
+  AdaptiveBodyRenderer,
+  findRenderer,
+} from "@/app/_components/body-renderers/registry";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -24,34 +27,29 @@ export function BodySection({ title, body, size, type }: BodySectionProps) {
       </div>
     );
 
-  // For some types (images, zip), we prefer to pass the raw (potentially base64) body
-  // to the renderer instead of trying to decode it here, which might mangle binary data.
-  const isBinaryType =
-    type.startsWith("image/") ||
-    type.includes("zip") ||
-    type.includes("application/octet-stream");
+  const { content, isBase64Decoded } = (() => {
+    const isBinaryType =
+      type.startsWith("image/") ||
+      type.includes("zip") ||
+      type.includes("application/octet-stream");
 
-  let content = body;
-  let isBase64Decoded = false;
-
-  if (!isBinaryType) {
+    if (isBinaryType || typeof body !== "string")
+      return { content: body, isBase64Decoded: false };
     try {
-      if (typeof body === "string") {
-        const decoded = atob(body);
-        content = decoded;
-        isBase64Decoded = true;
-      }
-    } catch (_e) {
-      // Not base64 or failed
+      return { content: atob(body), isBase64Decoded: true };
+    } catch {
+      return { content: body, isBase64Decoded: false };
     }
-  }
+  })();
 
+  // Stable renderer reference — won't cause remount of JER
   const renderer = findRenderer(type, content);
   let contentEl = <div></div>;
 
   if (renderer && !isRaw) {
-    const Component = renderer.component;
-    contentEl = <Component body={content} contentType={type} />;
+    contentEl = (
+      <AdaptiveBodyRenderer body={content} contentType={renderer.id} />
+    );
   } else {
     contentEl = (
       <pre className="flex-1 text-xs p-4 font-mono whitespace-pre-wrap break-all">
