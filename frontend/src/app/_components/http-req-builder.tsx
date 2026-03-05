@@ -321,7 +321,7 @@ export default function HttpReqBuilder() {
           </div>
 
           {/* Body Section */}
-          <div className="flex flex-col min-h-0">
+          <div className="flex flex-col min-h-0 overflow-hidden">
             <div className="space-y-3 flex-1 flex flex-col min-h-0">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Body</Label>
@@ -344,13 +344,17 @@ export default function HttpReqBuilder() {
                 </Tabs>
               </div>
 
-              <div className="flex-1 relative bg-muted/50 rounded-md border overflow-hidden min-h-[200px]">
+              <div className="flex-1 relative flex flex-col bg-muted/50 rounded-md border min-h-[200px]">
                 {bodyType === "json" && (
-                  <JsonEditor
-                    key={body}
-                    initialJson={body ? JSON.parse(body) : {}}
-                    onChangeJson={(newJson) => setBody(JSON.stringify(newJson))}
-                  />
+                  <div className="flex flex-col h-full overflow-auto">
+                    <JsonEditor
+                      key={body}
+                      initialJson={body ? JSON.parse(body) : {}}
+                      onChangeJson={(newJson) =>
+                        setBody(JSON.stringify(newJson))
+                      }
+                    />
+                  </div>
                 )}
                 {bodyType === "form-data" && (
                   <div className="p-4 space-y-4 h-full overflow-auto">

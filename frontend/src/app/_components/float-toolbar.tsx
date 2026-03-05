@@ -26,7 +26,7 @@ export function FloatToolbar({
       )}
     >
       {/* Content */}
-      <div className="bg-muted/10 backdrop-blur-sm shadow-md border border-muted/40 border-r-0 rounded-l-md p-1 flex flex-col gap-1.5 min-w-[44px]">
+      <div className="bg-muted/30 backdrop-blur-sm shadow-md border border-muted/70 border-r-0 rounded-l-md p-1 flex flex-col gap-1.5 min-w-[44px]">
         <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
       </div>
     </div>
