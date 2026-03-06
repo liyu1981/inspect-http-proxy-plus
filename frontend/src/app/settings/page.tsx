@@ -11,7 +11,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { Fontdiner_Swanky } from "next/font/google";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -134,12 +134,15 @@ export default function SettingsPage() {
     }
   };
 
-  const isChanged =
-    sysConfig &&
-    (logLevel !== sysConfig.log_level ||
-      apiAddr !== sysConfig.api_addr ||
-      maxSessionsRetain !==
-        (sysConfig.max_sessions_retain ?? 10000).toString());
+  const isChanged = React.useMemo(
+    () =>
+      sysConfig &&
+      (logLevel !== sysConfig.log_level ||
+        apiAddr !== sysConfig.api_addr ||
+        maxSessionsRetain !==
+          (sysConfig.max_sessions_retain ?? 10000).toString()),
+    [sysConfig, logLevel, apiAddr, maxSessionsRetain],
+  );
 
   return (
     <AppContainer>

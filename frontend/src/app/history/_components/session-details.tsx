@@ -185,7 +185,7 @@ export function SessionDetails({ id }: SessionDetailsProps) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 bg-background shadow-sm">
+      <div className="p-4 bg-background shadow-sm border-b">
         <div className="flex items-start justify-between mb-[5px]">
           <div>
             <div className="flex items-center gap-3 mb-2">

@@ -47,33 +47,21 @@ export function AppNavSidebar() {
   const searchParams = useSearchParams();
   const { readyState } = useWebSocketContext();
 
-  // Determine active menu based on current pathname and search params
-  const getActiveMenuFromPath = React.useCallback(() => {
-    // If it's a recent traffic page, check the config_id
+  // Derive active menu directly from URL — no useState/useEffect needed
+  const activeMenu = React.useMemo(() => {
     if (pathname.startsWith("/recent")) {
       const configIdFromUrl = searchParams.get("config_id");
-      if (configIdFromUrl) {
-        return `recent-${configIdFromUrl}`;
-      }
+      if (configIdFromUrl) return `recent-${configIdFromUrl}`;
       return "recent";
     }
-
     const activeItem = navItems.find((item) => pathname.startsWith(item.path));
     return activeItem ? activeItem.id : "";
   }, [pathname, searchParams]);
 
-  const [activeMenu, setActiveMenu] = React.useState(getActiveMenuFromPath());
-
   const topMenuItems = navItems.filter((item) => item.position !== "bottom");
   const bottomMenuItems = navItems.filter((item) => item.position === "bottom");
 
-  // Update active menu when pathname or search params change
-  React.useEffect(() => {
-    setActiveMenu(getActiveMenuFromPath());
-  }, [getActiveMenuFromPath]);
-
-  const handleMenuClick = (itemId: string, path: string) => {
-    setActiveMenu(itemId);
+  const handleMenuClick = (_itemId: string, path: string) => {
     router.push(path);
   };
 

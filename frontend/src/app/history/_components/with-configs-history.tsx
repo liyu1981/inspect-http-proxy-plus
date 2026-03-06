@@ -73,35 +73,38 @@ export function WithConfigsHistory({
   const [limit] = React.useState<number>(50);
   const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
 
-  // Reset offset when filters change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: necessary
+  // Ref to track latest selectedSessionId without making it a reactive dep —
+  // prevents auto-select and subscription effects from re-running on every selection change.
+  const selectedSessionIdRef = React.useRef(selectedSessionId);
+  React.useEffect(() => {
+    selectedSessionIdRef.current = selectedSessionId;
+  }, [selectedSessionId]);
+
+  // Reset offset when filters change — use primitives instead of dateRange object
+  // to avoid treating every new object reference as a change
   React.useEffect(() => {
     setOffset(0);
     setAllLoadedSessions([]);
     setSelectedIds([]);
-  }, [debouncedSearchQuery, filterMethod, filterStatus, dateRange]);
+  }, [
+    debouncedSearchQuery,
+    filterMethod,
+    filterStatus,
+    dateRange.from?.getTime(), // primitive number instead of Date object
+    dateRange.to?.getTime(), // primitive number instead of Date object
+  ]);
 
-  // Build query string
-  const params = React.useMemo(() => {
+  // Build query string as a string primitive for stable SWR key
+  const paramsString = React.useMemo(() => {
     const p = new URLSearchParams();
     p.set("limit", limit.toString());
     p.set("offset", offset.toString());
-    if (filterMethod) {
-      p.set("method", filterMethod);
-    }
-    if (filterStatus) {
-      p.set("status", filterStatus);
-    }
-    if (debouncedSearchQuery) {
-      p.set("q", debouncedSearchQuery);
-    }
-    if (dateRange.from) {
-      p.set("since", dateRange.from.toISOString());
-    }
-    if (dateRange.to) {
-      p.set("until", dateRange.to.toISOString());
-    }
-    return p;
+    if (filterMethod) p.set("method", filterMethod);
+    if (filterStatus) p.set("status", filterStatus);
+    if (debouncedSearchQuery) p.set("q", debouncedSearchQuery);
+    if (dateRange.from) p.set("since", dateRange.from.toISOString());
+    if (dateRange.to) p.set("until", dateRange.to.toISOString());
+    return p.toString();
   }, [
     limit,
     offset,
@@ -116,7 +119,7 @@ export function WithConfigsHistory({
     mutate,
     isValidating,
   } = useSWR<SessionListResponse>(
-    configId && loadSessions ? ["sessions", configId, params.toString()] : null,
+    configId && loadSessions ? ["sessions", configId, paramsString] : null,
     ([_, id, p]) => loadSessions!(id as string, new URLSearchParams(p as any)),
     {
       revalidateOnFocus: false,
@@ -163,45 +166,40 @@ export function WithConfigsHistory({
       type: string;
       ids?: string[];
     }) => {
-      // console.log(
-      //   "received session update via subscription:",
-      //   type,
-      //   session || ids,
-      //   configId,
-      // );
-
       if (type === "new_session" && session) {
-        if (session.ConfigID !== configId) {
-          return;
-        }
-
-        // mergeSessions will merge and update allLoadedSessions
+        if (session.ConfigID !== configId) return;
         if (mergeSessions) {
           setAllLoadedSessions((prev) => mergeSessions(prev, session));
         }
       } else if (type === "delete_session" && ids) {
         setAllLoadedSessions((prev) => prev.filter((s) => !ids.includes(s.ID)));
-        if (selectedSessionId && ids.includes(selectedSessionId)) {
+        // Read from ref — no stale closure, no re-subscription on selection change
+        if (
+          selectedSessionIdRef.current &&
+          ids.includes(selectedSessionIdRef.current)
+        ) {
           setSelectedSessionId(null);
         }
       }
     },
   );
 
+  // Auto-select first session when list changes, but only if current selection
+  // is no longer in the list. Uses ref to avoid selectedSessionId as a dep,
+  // which caused a loop: setSelectedSessionId → effect re-runs → setSelectedSessionId again.
   React.useEffect(() => {
     if (allLoadedSessions.length > 0) {
-      if (
-        allLoadedSessions.findIndex((s) => s.ID === selectedSessionId) === -1
-      ) {
+      const currentId = selectedSessionIdRef.current;
+      if (allLoadedSessions.findIndex((s) => s.ID === currentId) === -1) {
         setSelectedSessionId(allLoadedSessions[0].ID);
       }
     }
-  }, [allLoadedSessions, selectedSessionId]);
+  }, [allLoadedSessions]); // selectedSessionId intentionally removed from deps
 
   // Check if there are more sessions to load
   const hasMore =
     sessionList && sessionList.sessions
-      ? sessionList?.sessions.length === limit
+      ? sessionList.sessions.length === limit
       : false;
 
   const handleSessionClick = (id: string) => {

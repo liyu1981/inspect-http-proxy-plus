@@ -67,6 +67,10 @@ export function SavedPage({
   const [limit] = React.useState<number>(50);
   const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
 
+  // Ref to track whether we've auto-selected the first bookmark,
+  // avoids adding selectedBookmarkId to the effect deps causing a loop
+  const hasAutoSelectedRef = React.useRef(false);
+
   // Fetching logic: config_id is omitted to fetch ALL saved sessions
   const {
     data: bookmarkList,
@@ -95,13 +99,20 @@ export function SavedPage({
     onValidatingChange(isValidating);
   }, [isValidating, onValidatingChange]);
 
-  // Merge logic
+  // Reset offset and auto-select ref when filters/search change
+  React.useEffect(() => {
+    setOffset(0);
+    hasAutoSelectedRef.current = false;
+  }, [debouncedSearchQuery, filterMethod, filterStatus]);
+
+  // Merge logic — selectedBookmarkId removed from deps to avoid loop
   React.useEffect(() => {
     if (bookmarkList?.bookmarks) {
       if (offset === 0) {
         setAllLoadedBookmarks(bookmarkList.bookmarks);
-        // Auto-select first if nothing selected
-        if (bookmarkList.bookmarks.length > 0 && !selectedBookmarkId) {
+        // Auto-select first bookmark once per filter/search change
+        if (bookmarkList.bookmarks.length > 0 && !hasAutoSelectedRef.current) {
+          hasAutoSelectedRef.current = true;
           setSelectedBookmarkId(bookmarkList.bookmarks[0].ID);
         }
       } else {
@@ -114,12 +125,7 @@ export function SavedPage({
       }
       setIsLoadingMore(false);
     }
-  }, [bookmarkList, offset, selectedBookmarkId]);
-
-  // Reset offset when filters change
-  React.useEffect(() => {
-    setOffset(0);
-  }, []);
+  }, [bookmarkList, offset]);
 
   useSubscription(
     "saved_sessions",

@@ -58,6 +58,7 @@ function RecentPageContent() {
   }, [fromParam]);
 
   // Update URL if configId or from is missing, but ONLY if config exists
+  // Use only primitive values as deps — avoids searchParams object causing infinite loop
   React.useEffect(() => {
     if (!configExists || isLoading) return;
 
@@ -79,13 +80,13 @@ function RecentPageContent() {
     }
   }, [
     configId,
-    selectedConfig,
-    searchParams,
-    router,
+    selectedConfig?.config_row.ID, // primitive string instead of object
     fromParam,
     startTime,
     configExists,
     isLoading,
+    // searchParams and router intentionally omitted — both are stable references
+    // and including searchParams (an object) caused an infinite re-render loop
   ]);
 
   // Filter and Search States
