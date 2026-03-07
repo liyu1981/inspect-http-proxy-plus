@@ -4,14 +4,14 @@ import * as React from "react";
 import useSWR from "swr";
 import { useDebounced } from "@/app/_hooks/use-debounced";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
+	ResizableHandle,
+	ResizablePanel,
+	ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import type {
-  DateTimeRange,
-  ProxySessionStub,
-  SessionListResponse,
+	DateTimeRange,
+	ProxySessionStub,
+	SessionListResponse,
 } from "@/types";
 import { useSubscription } from "../../_hooks/use-subscription";
 import { BulkSelectionBar } from "./bulk-selection-bar";
@@ -20,242 +20,232 @@ import { SessionDetails } from "./session-details";
 import { SessionList } from "./session-list";
 
 interface WithConfigsHistoryProps {
-  configId: string;
-  onMutate: (mutate: () => void) => void;
-  onValidatingChange: (isValidating: boolean) => void;
-  searchQuery: string;
-  filterMethod: string;
-  filterStatus: string;
-  dateRange: DateTimeRange;
-  onSearchQueryChange: (val: string) => void;
-  onFilterMethodChange: (val: string) => void;
-  onFilterStatusChange: (val: string) => void;
-  loadSessions?: (
-    configId: string,
-    params: URLSearchParams,
-  ) => Promise<SessionListResponse>;
-  mergeSessions?: (
-    prev: ProxySessionStub[],
-    session: ProxySessionStub,
-  ) => ProxySessionStub[];
+	configId: string;
+	onValidatingChange: (isValidating: boolean) => void;
+	searchQuery: string;
+	filterMethod: string;
+	filterStatus: string;
+	dateRange: DateTimeRange;
+	onSearchQueryChange: (val: string) => void;
+	onFilterMethodChange: (val: string) => void;
+	onFilterStatusChange: (val: string) => void;
+	loadSessions?: (
+		configId: string,
+		params: URLSearchParams,
+	) => Promise<SessionListResponse>;
+	mergeSessions?: (
+		prev: ProxySessionStub[],
+		session: ProxySessionStub,
+	) => ProxySessionStub[];
 }
 
 export function WithConfigsHistory({
-  configId,
-  onMutate,
-  onValidatingChange,
-  searchQuery,
-  filterMethod,
-  filterStatus,
-  dateRange,
-  onSearchQueryChange,
-  onFilterMethodChange,
-  onFilterStatusChange,
-  loadSessions,
-  mergeSessions,
+	configId,
+	onValidatingChange,
+	searchQuery,
+	filterMethod,
+	filterStatus,
+	dateRange,
+	onSearchQueryChange,
+	onFilterMethodChange,
+	onFilterStatusChange,
+	loadSessions,
+	mergeSessions,
 }: WithConfigsHistoryProps) {
-  const [selectedSessionId, setSelectedSessionId] = React.useState<
-    string | null
-  >(null);
+	const [selectedSessionId, setSelectedSessionId] = React.useState<
+		string | null
+	>(null);
 
-  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+	const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 
-  const [debouncedSearchQuery, _setDebouncedSearchQuery] = useDebounced(
-    searchQuery,
-    500,
-  );
+	const [debouncedSearchQuery, _setDebouncedSearchQuery] = useDebounced(
+		searchQuery,
+		500,
+	);
 
-  const [allLoadedSessions, setAllLoadedSessions] = React.useState<
-    ProxySessionStub[]
-  >([]);
+	const [allLoadedSessions, setAllLoadedSessions] = React.useState<
+		ProxySessionStub[]
+	>([]);
 
-  const [offset, setOffset] = React.useState<number>(0);
-  const [limit] = React.useState<number>(50);
-  const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
+	const [offset, setOffset] = React.useState<number>(0);
+	const [limit] = React.useState<number>(50);
+	const [isLoadingMore, setIsLoadingMore] = React.useState<boolean>(false);
 
-  // Ref to track latest selectedSessionId without making it a reactive dep —
-  // prevents auto-select and subscription effects from re-running on every selection change.
-  const selectedSessionIdRef = React.useRef(selectedSessionId);
-  React.useEffect(() => {
-    selectedSessionIdRef.current = selectedSessionId;
-  }, [selectedSessionId]);
+	// Ref to track latest selectedSessionId without making it a reactive dep —
+	// prevents auto-select and subscription effects from re-running on every selection change.
+	const selectedSessionIdRef = React.useRef(selectedSessionId);
+	React.useEffect(() => {
+		selectedSessionIdRef.current = selectedSessionId;
+	}, [selectedSessionId]);
 
-  // Reset offset when filters change — use primitives instead of dateRange object
-  // to avoid treating every new object reference as a change
-  React.useEffect(() => {
-    setOffset(0);
-    setAllLoadedSessions([]);
-    setSelectedIds([]);
-  }, [
-    debouncedSearchQuery,
-    filterMethod,
-    filterStatus,
-    dateRange.from?.getTime(), // primitive number instead of Date object
-    dateRange.to?.getTime(), // primitive number instead of Date object
-  ]);
+	// Reset offset when filters change — use primitives instead of dateRange object
+	// to avoid treating every new object reference as a change
+	// biome-ignore lint/correctness/useExhaustiveDependencies: TODO
+	React.useEffect(() => {
+		setOffset(0);
+		setAllLoadedSessions([]);
+		setSelectedIds([]);
+	}, [
+		debouncedSearchQuery,
+		filterMethod,
+		filterStatus,
+		dateRange.from?.getTime(), // primitive number instead of Date object
+		dateRange.to?.getTime(), // primitive number instead of Date object
+	]);
 
-  // Build query string as a string primitive for stable SWR key
-  const paramsString = React.useMemo(() => {
-    const p = new URLSearchParams();
-    p.set("limit", limit.toString());
-    p.set("offset", offset.toString());
-    if (filterMethod) p.set("method", filterMethod);
-    if (filterStatus) p.set("status", filterStatus);
-    if (debouncedSearchQuery) p.set("q", debouncedSearchQuery);
-    if (dateRange.from) p.set("since", dateRange.from.toISOString());
-    if (dateRange.to) p.set("until", dateRange.to.toISOString());
-    return p.toString();
-  }, [
-    limit,
-    offset,
-    filterMethod,
-    filterStatus,
-    debouncedSearchQuery,
-    dateRange,
-  ]);
+	// Build query string as a string primitive for stable SWR key
+	const paramsString = React.useMemo(() => {
+		const p = new URLSearchParams();
+		p.set("limit", limit.toString());
+		p.set("offset", offset.toString());
+		if (filterMethod) p.set("method", filterMethod);
+		if (filterStatus) p.set("status", filterStatus);
+		if (debouncedSearchQuery) p.set("q", debouncedSearchQuery);
+		if (dateRange.from) p.set("since", dateRange.from.toISOString());
+		if (dateRange.to) p.set("until", dateRange.to.toISOString());
+		return p.toString();
+	}, [
+		limit,
+		offset,
+		filterMethod,
+		filterStatus,
+		debouncedSearchQuery,
+		dateRange,
+	]);
 
-  const {
-    data: sessionList,
-    mutate,
-    isValidating,
-  } = useSWR<SessionListResponse>(
-    configId && loadSessions ? ["sessions", configId, paramsString] : null,
-    ([_, id, p]) => loadSessions!(id as string, new URLSearchParams(p as any)),
-    {
-      revalidateOnFocus: false,
-    },
-  );
+	const { data: sessionList, isValidating } = useSWR<SessionListResponse>(
+		configId && loadSessions ? ["sessions", configId, paramsString] : null,
+		([_, id, p]) => loadSessions!(id as string, new URLSearchParams(p as any)),
+		{
+			revalidateOnFocus: false,
+		},
+	);
 
-  // Pass mutate function to parent
-  React.useEffect(() => {
-    onMutate(() => mutate());
-  }, [mutate, onMutate]);
+	// Pass isValidating to parent
+	React.useEffect(() => {
+		onValidatingChange(isValidating);
+	}, [isValidating, onValidatingChange]);
 
-  // Pass isValidating to parent
-  React.useEffect(() => {
-    onValidatingChange(isValidating);
-  }, [isValidating, onValidatingChange]);
+	// Merge new data into allLoadedSessions
+	React.useEffect(() => {
+		if (sessionList?.sessions) {
+			if (offset === 0) {
+				// Initial load or filter change - replace all
+				setAllLoadedSessions(sessionList.sessions);
+			} else {
+				// Load more - append new sessions
+				setAllLoadedSessions((prev) => {
+					const newSessions = sessionList.sessions.filter(
+						(newSession) => !prev.some((s) => s.ID === newSession.ID),
+					);
+					return [...prev, ...newSessions];
+				});
+			}
+			setIsLoadingMore(false);
+		}
+	}, [sessionList, offset]);
 
-  // Merge new data into allLoadedSessions
-  React.useEffect(() => {
-    if (sessionList?.sessions) {
-      if (offset === 0) {
-        // Initial load or filter change - replace all
-        setAllLoadedSessions(sessionList.sessions);
-      } else {
-        // Load more - append new sessions
-        setAllLoadedSessions((prev) => {
-          const newSessions = sessionList.sessions.filter(
-            (newSession) => !prev.some((s) => s.ID === newSession.ID),
-          );
-          return [...prev, ...newSessions];
-        });
-      }
-      setIsLoadingMore(false);
-    }
-  }, [sessionList, offset]);
+	useSubscription(
+		"sessions",
+		({
+			session,
+			type,
+			ids,
+		}: {
+			session: ProxySessionStub;
+			type: string;
+			ids?: string[];
+		}) => {
+			if (type === "new_session" && session) {
+				if (session.ConfigID !== configId) return;
+				if (mergeSessions) {
+					setAllLoadedSessions((prev) => mergeSessions(prev, session));
+				}
+			} else if (type === "delete_session" && ids) {
+				setAllLoadedSessions((prev) => prev.filter((s) => !ids.includes(s.ID)));
+				// Read from ref — no stale closure, no re-subscription on selection change
+				if (
+					selectedSessionIdRef.current &&
+					ids.includes(selectedSessionIdRef.current)
+				) {
+					setSelectedSessionId(null);
+				}
+			}
+		},
+	);
 
-  useSubscription(
-    "sessions",
-    ({
-      session,
-      type,
-      ids,
-    }: {
-      session: ProxySessionStub;
-      type: string;
-      ids?: string[];
-    }) => {
-      if (type === "new_session" && session) {
-        if (session.ConfigID !== configId) return;
-        if (mergeSessions) {
-          setAllLoadedSessions((prev) => mergeSessions(prev, session));
-        }
-      } else if (type === "delete_session" && ids) {
-        setAllLoadedSessions((prev) => prev.filter((s) => !ids.includes(s.ID)));
-        // Read from ref — no stale closure, no re-subscription on selection change
-        if (
-          selectedSessionIdRef.current &&
-          ids.includes(selectedSessionIdRef.current)
-        ) {
-          setSelectedSessionId(null);
-        }
-      }
-    },
-  );
+	// Auto-select first session when list changes, but only if current selection
+	// is no longer in the list. Uses ref to avoid selectedSessionId as a dep,
+	// which caused a loop: setSelectedSessionId → effect re-runs → setSelectedSessionId again.
+	React.useEffect(() => {
+		if (allLoadedSessions.length > 0) {
+			const currentId = selectedSessionIdRef.current;
+			if (allLoadedSessions.findIndex((s) => s.ID === currentId) === -1) {
+				setSelectedSessionId(allLoadedSessions[0].ID);
+			}
+		}
+	}, [allLoadedSessions]); // selectedSessionId intentionally removed from deps
 
-  // Auto-select first session when list changes, but only if current selection
-  // is no longer in the list. Uses ref to avoid selectedSessionId as a dep,
-  // which caused a loop: setSelectedSessionId → effect re-runs → setSelectedSessionId again.
-  React.useEffect(() => {
-    if (allLoadedSessions.length > 0) {
-      const currentId = selectedSessionIdRef.current;
-      if (allLoadedSessions.findIndex((s) => s.ID === currentId) === -1) {
-        setSelectedSessionId(allLoadedSessions[0].ID);
-      }
-    }
-  }, [allLoadedSessions]); // selectedSessionId intentionally removed from deps
+	// Check if there are more sessions to load
+	const hasMore =
+		sessionList && sessionList.sessions
+			? sessionList.sessions.length === limit
+			: false;
 
-  // Check if there are more sessions to load
-  const hasMore =
-    sessionList && sessionList.sessions
-      ? sessionList.sessions.length === limit
-      : false;
+	const handleSessionClick = (id: string) => {
+		setSelectedSessionId(id);
+	};
 
-  const handleSessionClick = (id: string) => {
-    setSelectedSessionId(id);
-  };
+	const handleLoadMore = () => {
+		setIsLoadingMore(true);
+		setOffset((prev) => prev + limit);
+	};
 
-  const handleLoadMore = () => {
-    setIsLoadingMore(true);
-    setOffset((prev) => prev + limit);
-  };
+	return (
+		<ResizablePanelGroup orientation="horizontal">
+			{/* List Panel */}
+			<ResizablePanel defaultSize={"40%"} minSize={"30%"} maxSize={"50%"}>
+				<SessionList
+					sessions={allLoadedSessions}
+					selectedSessionId={selectedSessionId}
+					selectedIds={selectedIds}
+					onSelectionChange={setSelectedIds}
+					filterMethod={filterMethod}
+					filterStatus={filterStatus}
+					searchQuery={searchQuery}
+					totalLoaded={allLoadedSessions.length}
+					hasMore={hasMore}
+					isLoadingMore={isLoadingMore}
+					onSessionClick={handleSessionClick}
+					onFilterMethodChange={onFilterMethodChange}
+					onFilterStatusChange={onFilterStatusChange}
+					onSearchQueryChange={onSearchQueryChange}
+					onClearFilters={() => {
+						onFilterMethodChange("");
+						onFilterStatusChange("");
+						onSearchQueryChange("");
+					}}
+					onLoadMore={handleLoadMore}
+				/>
+			</ResizablePanel>
 
-  return (
-    <ResizablePanelGroup orientation="horizontal">
-      {/* List Panel */}
-      <ResizablePanel defaultSize={"40%"} minSize={"30%"} maxSize={"50%"}>
-        <SessionList
-          sessions={allLoadedSessions}
-          selectedSessionId={selectedSessionId}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          filterMethod={filterMethod}
-          filterStatus={filterStatus}
-          searchQuery={searchQuery}
-          totalLoaded={allLoadedSessions.length}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          onSessionClick={handleSessionClick}
-          onFilterMethodChange={onFilterMethodChange}
-          onFilterStatusChange={onFilterStatusChange}
-          onSearchQueryChange={onSearchQueryChange}
-          onClearFilters={() => {
-            onFilterMethodChange("");
-            onFilterStatusChange("");
-            onSearchQueryChange("");
-          }}
-          onLoadMore={handleLoadMore}
-        />
-      </ResizablePanel>
+			<ResizableHandle withHandle />
 
-      <ResizableHandle withHandle />
+			{/* Details Panel */}
+			<ResizablePanel defaultSize={"60%"}>
+				<div className="h-full bg-muted/10 relative">
+					{selectedSessionId ? (
+						<SessionDetails id={selectedSessionId} />
+					) : (
+						<EmptySessionState />
+					)}
 
-      {/* Details Panel */}
-      <ResizablePanel defaultSize={"60%"}>
-        <div className="h-full bg-muted/10 relative">
-          {selectedSessionId ? (
-            <SessionDetails id={selectedSessionId} />
-          ) : (
-            <EmptySessionState />
-          )}
-
-          <BulkSelectionBar
-            selectedIds={selectedIds}
-            onClearSelection={() => setSelectedIds([])}
-          />
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  );
+					<BulkSelectionBar
+						selectedIds={selectedIds}
+						onClearSelection={() => setSelectedIds([])}
+					/>
+				</div>
+			</ResizablePanel>
+		</ResizablePanelGroup>
+	);
 }
