@@ -24,7 +24,7 @@ type ProxyConfigRow struct {
 	// The full configuration content in JSON format
 	ConfigJSON string `gorm:"not null"`
 
-	// A unique hash of (SourcePath + Cwd + ConfigJSON) for fast lookup
+	// A unique hash of ConfigJSON for fast lookup
 	Fingerprint string `gorm:"uniqueIndex;not null"`
 
 	// Relationship: One config row can have many sessions
@@ -40,7 +40,7 @@ func (ProxyConfigRow) TableName() string {
 // It checks the fingerprint first; if missing, it creates a new row with a NanoID.
 func GetOrCreateConfigRow(db *gorm.DB, sourcePath, cwd, configJSON string) (*ProxyConfigRow, error) {
 	// 1. Generate the unique fingerprint
-	fp := generateFingerprint(sourcePath, cwd, configJSON)
+	fp := generateFingerprint(configJSON)
 
 	var row ProxyConfigRow
 
@@ -94,9 +94,9 @@ func GetConfigRowByID(db *gorm.DB, id string) (*ProxyConfigRow, error) {
 }
 
 // generateFingerprint creates a SHA-256 hash of the unique config identity.
-func generateFingerprint(sourcePath, cwd, configJSON string) string {
+func generateFingerprint(configJSON string) string {
 	// Using prefixes and separators to ensure the hash is mathematically distinct
-	data := fmt.Sprintf("src:%s|cwd:%s|cfg:%s", sourcePath, cwd, configJSON)
+	data := fmt.Sprintf("cfg:%s", configJSON)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }
