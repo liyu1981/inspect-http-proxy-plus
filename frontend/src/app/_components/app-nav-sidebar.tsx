@@ -4,7 +4,6 @@ import { useAtom } from "jotai";
 import {
   ChevronLeft,
   ChevronRight,
-  Globe,
   List,
   PanelBottom,
   Wifi,
@@ -12,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Fontdiner_Swanky } from "next/font/google";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import { ReadyState } from "react-use-websocket";
@@ -154,9 +154,18 @@ export function AppNavSidebar() {
       <div className="h-[60px] border-b px-4 flex items-center justify-between">
         {navExpanded && (
           <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
+            <Image
+              src="/ihpp-32x32.png"
+              alt="Logo"
+              width="32"
+              height="32"
+              className="h-5 w-5"
+            />
             <span
-              className={cn("text-lg text-primary", fontdinerSwanky.className)}
+              className={cn(
+                "text-lg text-primary mt-[6px]",
+                fontdinerSwanky.className,
+              )}
             >
               {navTitle}
             </span>
@@ -171,7 +180,14 @@ export function AppNavSidebar() {
           {navExpanded ? (
             <ChevronLeft className="h-4 w-4" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <Image
+              src="/ihpp-32x32.png"
+              alt="Logo"
+              width="32"
+              height="32"
+              className="h-5 w-5"
+            />
+            // <ChevronRight className="h-4 w-4" />
           )}
         </Button>
       </div>

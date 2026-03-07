@@ -16,4 +16,6 @@ type SysConfigProxyEntry struct {
 	Listen          string `mapstructure:"listen" json:"listen" toml:"listen"`
 	Target          string `mapstructure:"target" json:"target" toml:"target"`
 	TruncateLogBody bool   `mapstructure:"truncate-log-body" json:"truncate_log_body" toml:"truncate-log-body"`
+	Active          bool   `mapstructure:"-" json:"active" toml:"-"`
+	Error           string `mapstructure:"-" json:"error" toml:"-"`
 }

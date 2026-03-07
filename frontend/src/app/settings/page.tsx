@@ -330,7 +330,7 @@ export default function SettingsPage() {
                         value={apiAddr}
                         onChange={(e) => setApiAddr(e.target.value)}
                         className="bg-input/30 font-mono text-sm"
-                        placeholder=":8080"
+                        placeholder=":20000"
                       />
                       <p className="text-xs text-muted-foreground">
                         The address and port the UI and API will listen on.

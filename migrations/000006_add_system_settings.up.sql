@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- Seed initial values if they don't exist
 INSERT OR IGNORE INTO system_settings (key, value) VALUES ('log_level', 'debug');
-INSERT OR IGNORE INTO system_settings (key, value) VALUES ('api_addr', ':8080');
+INSERT OR IGNORE INTO system_settings (key, value) VALUES ('api_addr', ':20000');

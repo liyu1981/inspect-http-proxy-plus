@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,12 +28,16 @@ func initFlags() {
 	pflag.Bool("in-memory", false, "Use in-memory database (no persistence)")
 	pflag.String("log-level", "", "Log level: debug, info, warn, error, fatal, panic, disabled")
 	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
+	pflag.Bool("daemon", false, "Run in background as a daemon")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy Plus - A simple proxy to inspect and log HTTP requests.\n\n")
-		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] [proxy1] [proxy2] ...\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] [command] [proxy1] [proxy2] ...\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		pflag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nCommands:\n")
+		fmt.Fprintf(os.Stderr, "  stop      Stop the running daemon\n")
+		fmt.Fprintf(os.Stderr, "  status    Show the status of the running daemon\n")
 		fmt.Fprintf(os.Stderr, "\nProxy Format:\n")
 		fmt.Fprintf(os.Stderr, "  target\n")
 		fmt.Fprintf(os.Stderr, "  listen_port,target[,truncate]\n")
@@ -40,6 +45,37 @@ func initFlags() {
 		fmt.Fprintf(os.Stderr, "  Example: http://localhost:8000\n")
 		fmt.Fprintf(os.Stderr, "  Multiple proxies: http://localhost:8000 http://localhost:8001\n")
 	}
+}
+
+func handleSubcommands() bool {
+	if pflag.NArg() == 0 {
+		return false
+	}
+
+	cmd := pflag.Arg(0)
+	switch cmd {
+	case "stop":
+		resp, err := core.SendDaemonCommand(core.DaemonCommand{Command: core.DaemonCommandStop})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error stopping daemon: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("%s\n", resp.Message)
+		os.Exit(0)
+	case "status":
+		resp, err := core.SendDaemonCommand(core.DaemonCommand{Command: core.DaemonCommandStatus})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting daemon status: %v\n", err)
+			os.Exit(1)
+		}
+		dataJson, _ := json.MarshalIndent(resp.Data, "", "  ")
+		fmt.Printf("Daemon Status:\n%s\n", string(dataJson))
+		os.Exit(0)
+	default:
+		// If it's not a known command, it might be a proxy argument
+		return false
+	}
+	return false
 }
 
 func resolveLogSettings() (string, string) {
@@ -189,6 +225,10 @@ func main() {
 		return
 	}
 
+	if handleSubcommands() {
+		return
+	}
+
 	core.CheckForUpdates()
 
 	// 1. Load the config file (bootstrap for db-path and initial settings)
@@ -205,6 +245,90 @@ func main() {
 	if sysConfig.InMemory {
 		sysConfig.DBPath = ":memory:"
 	}
+	if sysConfig.DBPath == "" {
+		sysConfig.DBPath = core.DefaultDbPath()
+	}
+
+	// Override with command-line proxy positional arguments if provided
+	proxyArgs := pflag.Args()
+	if len(proxyArgs) > 0 {
+		sysConfig.Proxies = make([]core.SysConfigProxyEntry, 0, len(proxyArgs))
+		for i, proxyStr := range proxyArgs {
+			entry, err := parseProxyFlag(proxyStr, i)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy argument '%s': %v\n", proxyStr, err)
+				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy argument")
+			}
+			sysConfig.Proxies = append(sysConfig.Proxies, entry)
+		}
+	}
+
+	// Check if daemon is already running
+	if resp, err := core.SendDaemonCommand(core.DaemonCommand{Command: core.DaemonCommandStatus}); err == nil {
+		fmt.Printf("%sIHPP is already running.%s\n", core.ColorCyan, core.ColorReset)
+
+		// Filter proxies that are NOT already in the daemon
+		var newProxies []core.SysConfigProxyEntry
+		if len(sysConfig.Proxies) > 0 {
+			daemonData, ok := resp.Data.(map[string]any)
+			if ok {
+				daemonProxies, ok := daemonData["proxies"].([]any)
+				if ok {
+					for _, p := range sysConfig.Proxies {
+						isNew := true
+						for _, dpAny := range daemonProxies {
+							dp, ok := dpAny.(map[string]any)
+							if ok {
+								// Match by listen port and target
+								if dp["listen"] == p.Listen && dp["target"] == p.Target {
+									isNew = false
+									break
+								}
+							}
+						}
+						if isNew {
+							newProxies = append(newProxies, p)
+						}
+					}
+				}
+			}
+		}
+
+		if len(newProxies) > 0 {
+			fmt.Printf("%d new/different proxies found. Do you want to merge them into the existing instance? (y/n): ", len(newProxies))
+			var response string
+			fmt.Scanln(&response)
+			if strings.ToLower(response) == "y" || strings.ToLower(response) == "yes" {
+				resp, err := core.SendDaemonCommand(core.DaemonCommand{
+					Command: core.DaemonCommandMerge,
+					Proxies: newProxies,
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error merging proxies: %v\n", err)
+					os.Exit(1)
+				}
+				dataJson, _ := json.MarshalIndent(resp.Data, "", "  ")
+				fmt.Printf("%s\n%s\n", resp.Message, string(dataJson))
+				os.Exit(0)
+			}
+		}
+		os.Exit(0)
+	}
+
+	core.CleanupStaleSocket()
+
+	daemonFlag, _ := pflag.CommandLine.GetBool("daemon")
+	if daemonFlag {
+		if err := core.Daemonize(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error starting daemon: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	if err := core.WritePIDFile(); err != nil {
+		log.Warn().Err(err).Msg("Failed to write PID file")
+	}
+	defer core.RemovePIDFile()
 
 	// 3. Initialize database (needed for persistent settings)
 	// Use resolved settings from config/flags for bootstrap
@@ -269,25 +393,12 @@ func main() {
 		_ = core.SetSystemSetting(db, "max_sessions_retain", fmt.Sprintf("%d", sysConfig.MaxSessionsRetain))
 	}
 
-	// Override with command-line proxy positional arguments if provided
-	proxyArgs := pflag.Args()
-	if len(proxyArgs) > 0 {
-		log.Info().Int("count", len(proxyArgs)).Msg("Overriding proxy configuration with command-line arguments")
-		sysConfig.Proxies = make([]core.SysConfigProxyEntry, 0, len(proxyArgs))
-		for i, proxyStr := range proxyArgs {
-			entry, err := parseProxyFlag(proxyStr, i)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy argument '%s': %v\n", proxyStr, err)
-				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy argument")
-			}
-			sysConfig.Proxies = append(sysConfig.Proxies, entry)
-		}
-	}
-
 	// 7. Validate proxy entries
 	if len(sysConfig.Proxies) == 0 {
 		log.Warn().Msg("No [[proxies]] entries found in configuration. Only UI server will be active.")
 	}
+
+	startTime := time.Now()
 
 	// 8. Initialize single shared UI server
 	var uiServer *web.UIServer
@@ -314,23 +425,101 @@ func main() {
 	reaper.Start(5 * time.Minute)
 
 	// 9. Loop through all proxy entries and create corresponding threads
-	isOverridden := len(proxyArgs) > 0
 	for i, proxyEntry := range sysConfig.Proxies {
 		err := core.StartProxyServer(i, proxyEntry, db, publishFunc)
 		if err != nil {
-			if isOverridden {
-				fmt.Fprintf(os.Stderr, "FATAL: Proxy server %d failed: %v\n", i, err)
-				log.Fatal().Err(err).Int("index", i).Msg("Proxy server failed (command-line override)")
-			} else {
-				fmt.Fprintf(os.Stderr, "WARNING: Skipping proxy entry %d due to error: %v\n", i, err)
-				log.Warn().Err(err).Int("index", i).Msg("Skipping malformed proxy entry from configuration")
-			}
+			fmt.Fprintf(os.Stderr, "WARNING: Skipping proxy entry %d due to error: %v\n", i, err)
+			log.Warn().Err(err).Int("index", i).Msg("Skipping malformed proxy entry")
 		}
 	}
 
 	// 9. Graceful shutdown handler
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
+	// Start Daemon Listener
+	err = core.StartDaemonListener(
+		func() {
+			shutdown <- syscall.SIGTERM
+		},
+		func(newProxies []core.SysConfigProxyEntry) any {
+			results := make([]map[string]any, 0)
+			for _, newProxy := range newProxies {
+				found := false
+				for _, existing := range sysConfig.Proxies {
+					if existing.Listen == newProxy.Listen {
+						if existing.Target == newProxy.Target {
+							results = append(results, map[string]any{
+								"proxy":  newProxy.Listen,
+								"result": "ignored",
+								"reason": "identical config exists",
+							})
+						} else {
+							results = append(results, map[string]any{
+								"proxy":  newProxy.Listen,
+								"result": "conflict",
+								"reason": "port already in use by another target",
+							})
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					err := core.StartProxyServer(len(sysConfig.Proxies), newProxy, db, publishFunc)
+					if err != nil {
+						results = append(results, map[string]any{
+							"proxy":  newProxy.Listen,
+							"result": "error",
+							"reason": err.Error(),
+						})
+						newProxy.Active = false
+						newProxy.Error = err.Error()
+					} else {
+						results = append(results, map[string]any{
+							"proxy":  newProxy.Listen,
+							"result": "success",
+						})
+						newProxy.Active = true
+					}
+					sysConfig.Proxies = append(sysConfig.Proxies, newProxy)
+				}
+			}
+			return results
+		},
+		func() any {
+			// Enrich with active status from GlobalVarStore
+			allServers := core.GlobalVar.GetAllProxyServers()
+			enrichedProxies := make([]map[string]any, 0)
+
+			// Get actual proxy configs from GlobalVarStore to see their IDs and settings
+			idToConfig := core.GlobalVar.GetAllProxyConfigs()
+
+			for id, config := range idToConfig {
+				active := false
+				if _, ok := allServers[id]; ok {
+					active = true
+				}
+				enrichedProxies = append(enrichedProxies, map[string]any{
+					"config_id": id,
+					"listen":    config.ListenAddr,
+					"target":    config.TargetURL.String(),
+					"active":    active,
+				})
+			}
+
+			return map[string]any{
+				"pid":      os.Getpid(),
+				"uptime":   time.Since(startTime).String(),
+				"db_path":  sysConfig.DBPath,
+				"api_addr": sysConfig.APIAddr,
+				"proxies":  enrichedProxies,
+			}
+		},
+	)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to start daemon listener")
+	}
 
 	<-shutdown
 	log.Info().Msg("Shutting down...")

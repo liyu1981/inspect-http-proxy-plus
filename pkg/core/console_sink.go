@@ -20,6 +20,9 @@ import (
 
 // printIncomingRequest prints the incoming request details
 func printIncomingRequest(entry *LogEntry) {
+	if IsDaemon() {
+		return
+	}
 	fmt.Printf("\n%s--- Incoming Request ---%s\n", ColorBold+ColorCyan, ColorReset)
 	fmt.Printf("%sTime:%s %s\n", ColorGray, ColorReset, entry.Timestamp.Format(time.RFC3339))
 	fmt.Printf("%sFrom:%s %s\n", ColorGray, ColorReset, entry.ClientAddr)
@@ -38,6 +41,9 @@ func printIncomingRequest(entry *LogEntry) {
 
 // printTargetResponse prints the target response details
 func printTargetResponse(entry *LogEntry, status string, truncate bool) {
+	if IsDaemon() {
+		return
+	}
 	statusColor := ColorGreen
 	if entry.StatusCode >= 500 {
 		statusColor = ColorRed

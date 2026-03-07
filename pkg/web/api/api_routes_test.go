@@ -35,7 +35,7 @@ func TestHandleSysConfig(t *testing.T) {
 	sysConfig := &core.SysConfig{
 		LogLevel: "debug",
 		DBPath:   ":memory:",
-		APIAddr:  ":8080",
+		APIAddr:  ":20000",
 	}
 	core.GlobalVar.SetSysConfig(sysConfig)
 

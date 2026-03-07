@@ -17,7 +17,7 @@ func DefaultDbPath() string {
 	if err != nil {
 		return ".proxy.db" // Fallback to current directory
 	}
-	return filepath.Join(homeDir, ".proxy/proxy_logs.db")
+	return filepath.Join(homeDir, ".ihpp/proxy_logs.db")
 }
 
 // initDatabase initializes the database with migrations

@@ -47,8 +47,10 @@ type ProxyConfig struct {
 // NewProxyHandler creates a new HTTP handler for proxying requests
 func NewProxyHandler(config *ProxyConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("\n%s[Config: %s | Listen: %s | Target: %s]%s\n",
-			ColorBold+ColorGray, config.ConfigID, config.ListenAddr, config.TargetURL.String(), ColorReset)
+		if !IsDaemon() {
+			fmt.Printf("\n%s[Config: %s | Listen: %s | Target: %s]%s\n",
+				ColorBold+ColorGray, config.ConfigID, config.ListenAddr, config.TargetURL.String(), ColorReset)
+		}
 
 		startTime := time.Now()
 		entry := &LogEntry{

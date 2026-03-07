@@ -14,6 +14,10 @@ func IsDev() bool {
 	return os.Getenv("APP_ENV") == "development"
 }
 
+func IsDaemon() bool {
+	return os.Getenv("IHPP_DAEMON") == "1"
+}
+
 // copyHeaders performs a deep copy of headers from src to dst
 func copyHeaders(src, dst http.Header) {
 	for k, vv := range src {
