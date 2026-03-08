@@ -14,10 +14,20 @@ interface StreamChunk {
   raw: string;
   json: any;
   content: string;
+  reasoning: string;
 }
 
 export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const formatText = (text: string) => {
+    return text.split("\n").map((line, i, arr) => (
+      <span key={i}>
+        {line}
+        {i < arr.length - 1 && <br />}
+      </span>
+    ));
+  };
 
   const chunks = useMemo(() => {
     const lines = body.split("\n");
@@ -32,13 +42,16 @@ export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
 
       try {
         const json = JSON.parse(rawData);
-        const content =
-          json.choices?.[0]?.delta?.content || json.choices?.[0]?.text || "";
+        const delta = json.choices?.[0]?.delta;
+        const content = delta?.content || json.choices?.[0]?.text || "";
+        const reasoning = delta?.reasoning || "";
+
         // Even if content is empty (like role: assistant chunks), we keep the chunk for JSON inspection
         result.push({
           raw: trimmed,
           json: json,
           content: content,
+          reasoning: reasoning,
         });
       } catch (_e) {
         // Skip invalid JSON
@@ -84,7 +97,13 @@ export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
               )}
               title="Click to view JSON chunk"
             >
-              {chunk.content || (
+              {chunk.content ? (
+                formatText(chunk.content)
+              ) : chunk.reasoning ? (
+                <span className="text-[10px] opacity-50 mx-0.5 align-middle">
+                  {formatText(chunk.reasoning)}
+                </span>
+              ) : (
                 <span className="text-[10px] opacity-30 mx-0.5 align-middle">
                   [meta]
                 </span>
