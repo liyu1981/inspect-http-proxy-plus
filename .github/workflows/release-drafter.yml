@@ -1,0 +1,25 @@
+name: Release Drafter
+
+on:
+  push:
+    # branches to consider (master, main, etc)
+    branches:
+      - master
+  # pull_request event is required only for autolabeler
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update_release_draft:
+    runs-on: ubuntu-latest
+    steps:
+      # (Optional) Checkout is only needed if you want to use a local config
+      # - uses: actions/checkout@v4
+      
+      - uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
