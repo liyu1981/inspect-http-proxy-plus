@@ -1,11 +1,18 @@
 package core
 
+import "time"
+
 const Version = "dev"
 
 // Constants
 const (
 	MaxBodyPrintSize = 1024 * 10 // Max size if truncation is enabled
 	LogLevelDisabled = "disabled"
+
+	// Default response timeout for non-streaming requests
+	DefaultResponseTimeout = 30 * time.Second
+	// Extended timeout for Server-Sent Events (SSE) streaming
+	SSEResponseTimeout = 60 * time.Minute
 )
 
 // ANSI Color Codes

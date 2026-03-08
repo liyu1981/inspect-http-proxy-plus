@@ -152,36 +152,74 @@ func NewProxyHandler(config *ProxyConfig) http.HandlerFunc {
 		}
 		defer resp.Body.Close()
 
-		// --- Read Response Body ---
+		// --- Check for SSE ---
+		contentType := resp.Header.Get("Content-Type")
+		isSSE := strings.Contains(strings.ToLower(contentType), "text/event-stream")
+
+		// Set response headers
+		destHeaders := w.Header()
+		copyHeaders(resp.Header, destHeaders)
+		removeHopByHopHeaders(destHeaders)
+
 		var responseBodyBytes []byte
-		if resp.Body != nil {
+
+		if isSSE {
+			// Extend timeout for SSE
+			rc := http.NewResponseController(w)
+			_ = rc.SetWriteDeadline(time.Now().Add(SSEResponseTimeout))
+
+			w.WriteHeader(resp.StatusCode)
+
+			// Stream and capture SSE response
+			var capturedBody bytes.Buffer
+			mw := io.MultiWriter(w, &capturedBody)
+
+			// Small buffer for frequent flushing
+			buf := make([]byte, 4096)
+			for {
+				n, err := resp.Body.Read(buf)
+				if n > 0 {
+					_, writeErr := mw.Write(buf[:n])
+					if writeErr != nil {
+						log.Warn().Err(writeErr).Msg("Failed writing SSE chunk to client")
+						break
+					}
+					_ = rc.Flush()
+				}
+				if err != nil {
+					if err != io.EOF {
+						log.Warn().Err(err).Msg("Error reading SSE response body")
+					}
+					break
+				}
+			}
+			responseBodyBytes = capturedBody.Bytes()
+		} else {
+			// --- Read Response Body (Standard/Buffering mode) ---
+			// Apply default response timeout
+			rc := http.NewResponseController(w)
+			_ = rc.SetWriteDeadline(time.Now().Add(DefaultResponseTimeout))
+
 			responseBodyBytes, err = io.ReadAll(resp.Body)
 			if err != nil {
 				log.Warn().Err(err).Msg("Error reading full response body")
 			}
-			entry.ResponseBody = responseBodyBytes
+
+			w.WriteHeader(resp.StatusCode)
+			if len(responseBodyBytes) > 0 {
+				_, err = w.Write(responseBodyBytes)
+				if err != nil {
+					log.Warn().Err(err).Msg("Failed writing response body to client")
+				}
+			}
 		}
 
-		// --- Log Response Details ---
+		entry.ResponseBody = responseBodyBytes
 		entry.StatusCode = resp.StatusCode
 		entry.ResponseHeaders = resp.Header.Clone()
 		entry.Duration = time.Since(startTime)
 
 		printTargetResponse(entry, resp.Status, config.TruncateLogBody)
-
-		// --- Send Response Back to Client ---
-		destHeaders := w.Header()
-		copyHeaders(entry.ResponseHeaders, destHeaders)
-		removeHopByHopHeaders(destHeaders)
-
-		w.WriteHeader(resp.StatusCode)
-
-		if len(responseBodyBytes) > 0 {
-			_, err = w.Write(responseBodyBytes)
-			if err != nil {
-				log.Warn().Err(err).Msg("Failed writing response body to client")
-			}
-		}
 
 		// --- Finish Session in DB and Notify (Asynchronously) ---
 		if config.DB != nil && session != nil {
@@ -280,8 +318,8 @@ func StartProxyServer(
 	proxyServer := &http.Server{
 		Addr:         proxyEntry.Listen,
 		Handler:      http.HandlerFunc(NewProxyHandler(proxyConfig)),
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  0, // Handled per-request or no timeout for proxies
+		WriteTimeout: 0, // Handled per-request or no timeout for proxies
 	}
 
 	// Store ProxyServer in GlobalVarStore's id_to_proxyserver map
