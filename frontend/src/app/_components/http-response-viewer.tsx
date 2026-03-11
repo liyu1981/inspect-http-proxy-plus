@@ -355,7 +355,7 @@ export function HttpResponseViewer({
                     <Label className="text-[10px] uppercase font-bold text-muted-foreground">
                       Payload
                     </Label>
-                    <pre className="p-3 bg-muted/30 rounded border text-[11px] font-mono overflow-auto max-h-[150px]">
+                    <pre className="p-3 bg-muted/30 rounded border text-[11px] font-mono overflow-auto max-h-[150px] whitespace-pre-wrap break-all">
                       {request.body}
                     </pre>
                   </div>
