@@ -1,3 +1,4 @@
+import { Sha256 } from "@aws-crypto/sha256-browser";
 import { atom } from "jotai";
 import type { RequestData } from "./http-req";
 
@@ -23,7 +24,7 @@ const STORE_NAME = "responses";
 const MAX_STORED_RESPONSES = 1000; // Limit number of cached responses
 
 /**
- * Calculates SHA256 Hash of the request components using Web Crypto API.
+ * Calculates SHA256 Hash of the request components using Web Crypto API or fallback.
  */
 export async function calculateRequestHash(req: RequestData): Promise<string> {
   const enabledHeaders = req.headers
@@ -34,10 +35,12 @@ export async function calculateRequestHash(req: RequestData): Promise<string> {
 
   const rawString = `${req.method}${req.url}${enabledHeaders}${req.body}${req.timestamp}`;
 
-  const msgUint8 = new TextEncoder().encode(rawString);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hash = new Sha256();
+  hash.update(rawString);
+  const result = await hash.digest();
+  return Array.from(result)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // IndexedDB helper functions

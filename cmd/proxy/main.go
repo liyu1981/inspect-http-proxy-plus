@@ -28,7 +28,7 @@ func initFlags() {
 	pflag.Bool("in-memory", false, "Use in-memory database (no persistence)")
 	pflag.String("log-level", "", "Log level: debug, info, warn, error, fatal, panic, disabled")
 	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
-	pflag.Bool("daemon", false, "Run in background as a daemon")
+	pflag.BoolP("daemon", "d", false, "Run in background as a daemon")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy Plus - A simple proxy to inspect and log HTTP requests.\n\n")
