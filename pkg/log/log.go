@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,6 +11,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+const (
+	RotateLogMaxSize = 20
+	RoateeLogMaxBackups = 3
 )
 
 func ResolveLogSettings() (string, string) {
@@ -40,7 +44,7 @@ func ResolveLogSettings() (string, string) {
 func getLogFilePath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ""
+		log.Fatal().Err(err).Msg("Error getting home directory")
 	}
 	logDir := filepath.Join(home, ".ihpp", "logs")
 	_ = os.MkdirAll(logDir, 0700)
@@ -58,6 +62,17 @@ func SetupLogger(logLevel string, logDest string) {
 	}
 	zerolog.SetGlobalLevel(level)
 
+	// shortcut for dev mode
+	if core.IsDev() {
+		out := zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			TimeFormat: time.RFC3339,
+		}
+		log.Logger = log.Output(out).With().Caller().Logger()
+		return
+	}
+
+	// otherwise, setup file based logging with rotating
 	var out io.Writer
 	switch logDest {
 	case "console":
@@ -65,62 +80,14 @@ func SetupLogger(logLevel string, logDest string) {
 			Out:        os.Stderr,
 			TimeFormat: time.RFC3339,
 		}
-	case "default":
-		if core.IsDev() {
-			out = zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			}
-		} else {
-			logFile := getLogFilePath()
-			if logFile != "" {
-				out = &lumberjack.Logger{
-					Filename:   logFile,
-					MaxSize:    20,
-					MaxBackups: 3,
-					LocalTime:  true,
-					Compress:   true,
-				}
-			} else {
-				out = zerolog.ConsoleWriter{
-					Out:        os.Stderr,
-					TimeFormat: time.RFC3339,
-				}
-			}
-		}
-	case "":
-		if core.IsDev() {
-			out = zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			}
-		} else {
-			logFile := getLogFilePath()
-			if logFile != "" {
-				out = &lumberjack.Logger{
-					Filename:   logFile,
-					MaxSize:    20,
-					MaxBackups: 3,
-					LocalTime:  true,
-					Compress:   true,
-				}
-			} else {
-				out = zerolog.ConsoleWriter{
-					Out:        os.Stderr,
-					TimeFormat: time.RFC3339,
-				}
-			}
-		}
-	default:
-		f, err := os.OpenFile(logDest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening log file %s: %v. Falling back to console.\n", logDest, err)
-			out = zerolog.ConsoleWriter{
-				Out:        os.Stderr,
-				TimeFormat: time.RFC3339,
-			}
-		} else {
-			out = f
+	default: 
+		logFile := getLogFilePath()
+		out = &lumberjack.Logger{
+			Filename:   logFile,
+			MaxSize:    20,
+			MaxBackups: 3,
+			LocalTime:  true,
+			Compress:   true,
 		}
 	}
 
