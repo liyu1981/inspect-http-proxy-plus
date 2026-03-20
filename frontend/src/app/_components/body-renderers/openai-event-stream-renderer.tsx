@@ -44,7 +44,8 @@ export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
         const json = JSON.parse(rawData);
         const delta = json.choices?.[0]?.delta;
         const content = delta?.content || json.choices?.[0]?.text || "";
-        const reasoning = delta?.reasoning || "";
+        const reasoning =
+          delta?.reasoning_content || delta?.reasoning || delta?.thinking || "";
 
         // Even if content is empty (like role: assistant chunks), we keep the chunk for JSON inspection
         result.push({
@@ -97,13 +98,14 @@ export const OpenAiEventStreamRenderer = ({ body }: BodyRendererProps) => {
               )}
               title="Click to view JSON chunk"
             >
-              {chunk.content ? (
-                formatText(chunk.content)
-              ) : chunk.reasoning ? (
-                <span className="text-[10px] opacity-50 mx-0.5 align-middle">
+              {chunk.reasoning && (
+                <span className="text-[10px] opacity-60 bg-muted/50 rounded-sm px-0.5 mx-0.5 italic align-middle">
                   {formatText(chunk.reasoning)}
                 </span>
-              ) : (
+              )}
+              {chunk.content ? (
+                formatText(chunk.content)
+              ) : chunk.reasoning ? null : (
                 <span className="text-[10px] opacity-30 mx-0.5 align-middle">
                   [meta]
                 </span>

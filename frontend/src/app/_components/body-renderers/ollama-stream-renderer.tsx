@@ -14,10 +14,20 @@ interface OllamaChunk {
   raw: string;
   json: any;
   content: string;
+  thinking: string;
 }
 
 export const OllamaStreamRenderer = ({ body }: BodyRendererProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const formatText = (text: string) => {
+    return text.split("\n").map((line, i, arr) => (
+      <span key={`line-${i}`}>
+        {line}
+        {i < arr.length - 1 && <br />}
+      </span>
+    ));
+  };
 
   const chunks = useMemo(() => {
     const lines = body.split("\n");
@@ -31,11 +41,13 @@ export const OllamaStreamRenderer = ({ body }: BodyRendererProps) => {
         const json = JSON.parse(trimmed);
         // Ollama response field is usually 'response' or 'message.content'
         const content = json.response || json.message?.content || "";
+        const thinking = json.thinking || "";
 
         result.push({
           raw: trimmed,
           json: json,
           content: content,
+          thinking: thinking,
         });
       } catch (_e) {
         // Skip invalid JSON
@@ -81,7 +93,14 @@ export const OllamaStreamRenderer = ({ body }: BodyRendererProps) => {
               )}
               title="Click to view JSON chunk"
             >
-              {chunk.content || (
+              {chunk.thinking && (
+                <span className="text-[10px] opacity-60 bg-orange-500/5 rounded-sm px-0.5 mx-0.5 italic align-middle">
+                  {formatText(chunk.thinking)}
+                </span>
+              )}
+              {chunk.content ? (
+                formatText(chunk.content)
+              ) : chunk.thinking ? null : (
                 <span className="text-[10px] opacity-30 mx-0.5 align-middle">
                   [meta]
                 </span>
