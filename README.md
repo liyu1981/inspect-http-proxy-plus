@@ -29,14 +29,17 @@ For detailed guides, installation instructions, and feature overviews, visit our
 
 ## ✨ Key Features
 
+-   **Daemon Mode:** Run `ihpp` in the background as a persistent service.
 -   **Multi-Proxy Management:** Run and manage multiple proxy configurations simultaneously from a single dashboard.
 -   **Real-time Inspection:** Watch HTTP requests and responses flow through in real-time via WebSockets.
--   **Persistent History:** All proxied traffic is stored in a local SQLite database with Full-Text Search (FTS5) support.
+-   **Persistent History:** All proxied traffic is stored in a local SQLite database with **Full-Text Search (FTS5)** support for lightning-fast searching.
 -   **Modern Web UI:** A polished, responsive dashboard built with React (Next.js) and Tailwind CSS.
 -   **HTTP Request Builder:** Replay, modify, and compose new HTTP requests directly from the UI.
--   **Traffic Analysis:** Automatic decompression and pretty-printing of common content types.
+-   **OpenAI Stream Support:** Specialized renderer for OpenAI-compatible Server-Sent Events (SSE) streams, including support for reasoning fields and proper newline handling.
+-   **Traffic Analysis:** Automatic decompression (gzip/brotli), pretty-printing of common content types (JSON, XML, HTML), and image previews.
 -   **CURL Export:** Quickly copy any captured request as a `curl` command.
 -   **Bookmarks:** Save important requests for quick access later.
+-   **Advanced Logging:** Configurable log levels and destinations, including file-based logging with automatic rotation.
 
 ## 📦 Installation
 
@@ -75,10 +78,18 @@ This script will concurrently run the Go backend and the Next.js frontend, allow
 
 ### CLI Flags
 
--   `--db-path <path>`: Path to the SQLite database file (default: `~/.proxy/proxy_logs.db`).
+-   `--daemon`, `-d`: Run in background as a daemon.
+-   `--db-path <path>`: Path to the SQLite database file (default: `~/.ihpp/proxy_logs.db`).
 -   `--in-memory`: Use an in-memory database (no persistence, best for one-time usage).
--   `--log-level <level>`: Set log level (debug, info, warn, error, fatal, panic, disabled).
+-   `--log-level <level>`: Set log level (`debug`, `info`, `warn`, `error`, `fatal`, `panic`, `disabled`).
+-   `--log-dest <dest>`: Log destination: `console`, `null`, or a file path. File-based logging includes automatic rotation.
 -   `--config <path>`: Path to a `.toml` configuration file.
+
+### Subcommands
+
+When running as a daemon or interacting with one:
+-   `ihpp stop`: Stop the running daemon gracefully.
+-   `ihpp status`: Show the status of the running daemon (uptime, proxies, etc.).
 
 ### Common Scenarios
 
@@ -89,7 +100,14 @@ ihpp --in-memory http://localhost:8080
 ```
 This starts a proxy at `:20003` (default) targeting `http://localhost:8080`.
 
-#### 2. Managing Multiple Services
+#### 2. Running in Background (Daemon Mode)
+Start the proxy and keep it running in the background.
+```bash
+ihpp --daemon :3000,http://localhost:8080
+```
+Use `ihpp status` to check if it's running and `ihpp stop` to terminate it.
+
+#### 3. Managing Multiple Services
 Specify multiple proxies directly on the command line.
 ```bash
 ihpp :3001,http://localhost:8081 :3002,http://localhost:8082

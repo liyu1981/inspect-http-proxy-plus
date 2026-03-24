@@ -11,7 +11,7 @@ You can manually build requests from scratch:
 ## Replaying from History
 Any captured request can be sent to the Builder with a single click. This populates the form with the original data, allowing you to tweak values before re-sending.
 
-### [Screenshot Placeholder: Request Builder Form]
+![Request Builder Form](/img/request_builder_form.png)
 
 ## Multipart/Form-Data
 The builder supports complex form submissions, including file uploads and multiple text fields.
@@ -19,4 +19,4 @@ The builder supports complex form submissions, including file uploads and multip
 ## CURL Export
 Every request in `ihpp` can be exported as a standard `curl` command, making it easy to share or run in your terminal.
 
-### [Screenshot Placeholder: Export button and curl snippet]
+![CURL Export](/img/export_button_and_curl_snippet.gif)

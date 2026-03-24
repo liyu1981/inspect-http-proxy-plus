@@ -11,6 +11,10 @@ slug: /
 
 Whether you are debugging complex microservices, reverse-engineering APIs, or testing frontend integrations, `ihpp` provides the tools you need in a single, lightweight binary.
 
+## Overview
+
+![ihpp Overview](/img/overview.png)
+
 ## Why ihpp?
 
 Traditional tools like `curl` or browser DevTools are great, but they often lack:

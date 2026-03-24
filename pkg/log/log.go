@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	RotateLogMaxSize = 20
+	RotateLogMaxSize    = 20
 	RoateeLogMaxBackups = 3
 )
 
@@ -80,7 +80,7 @@ func SetupLogger(logLevel string, logDest string) {
 			Out:        os.Stderr,
 			TimeFormat: time.RFC3339,
 		}
-	default: 
+	default:
 		logFile := getLogFilePath()
 		out = &lumberjack.Logger{
 			Filename:   logFile,
