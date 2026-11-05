@@ -35,6 +35,8 @@ func LoadConfig() {
 		}
 	}
 
+	warnOutdatedConfig()
+
 	level, dest := ihppLog.ResolveLogSettings()
 	fmt.Printf("%sLog Setup Resolved:%s %v %v\n", core.ColorCyan, core.ColorReset, level, dest)
 	ihppLog.SetupLogger(level, dest)
@@ -49,6 +51,26 @@ func LoadConfig() {
 	// Support environment variables
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+}
+
+// warnOutdatedConfig prints a hint when the loaded configuration file was
+// written for an older (or newer) ihpp release.
+func warnOutdatedConfig() {
+	file := viper.ConfigFileUsed()
+	if file == "" {
+		return
+	}
+
+	version := viper.GetInt(ConfigVersionKey)
+	switch {
+	case version < ConfigVersion:
+		fmt.Fprintf(os.Stderr, "%sWARNING:%s config file %s uses format version %d, latest is %d.\n",
+			core.ColorYellow, core.ColorReset, file, version, ConfigVersion)
+		fmt.Fprintf(os.Stderr, "         Run 'ihpp config --upgrade' to migrate it while keeping your values.\n")
+	case version > ConfigVersion:
+		fmt.Fprintf(os.Stderr, "%sWARNING:%s config file %s uses format version %d, newer than this build supports (%d).\n",
+			core.ColorYellow, core.ColorReset, file, version, ConfigVersion)
+	}
 }
 
 func LoadSettingsFromDB(db *gorm.DB, sysConfig *core.SysConfig) {

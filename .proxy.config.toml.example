@@ -1,0 +1,53 @@
+# =============================================================================
+# Inspect HTTP Proxy Plus (ihpp) configuration
+#
+# Generate a fresh file with `ihpp config`. Migrate an older file with
+# `ihpp config --upgrade`, which keeps every value you have configured and
+# carries unknown keys over unchanged.
+#
+# `config-version` tracks the layout of this file and is managed by ihpp.
+# =============================================================================
+
+config-version = 1
+
+# Log verbosity: debug, info, warn, error, fatal, panic or disabled.
+# Default: "disabled" ("debug" when APP_ENV=development)
+log-level = 'info'
+
+# Log destination: "console", "null", "default" or a file path.
+# A file path (or "default") enables rotating logs in ~/.ihpp/logs.
+# Default: "default" ("console" when APP_ENV=development)
+log-dest = 'default'
+
+# Path to the SQLite database that stores captured sessions.
+# Default: "~/.ihpp/proxy_logs.db" (leave empty to use the default)
+db-path = ''
+
+# Keep everything in memory and never write captured traffic to disk.
+# Overrides db-path. Default: false
+in-memory = false
+
+# Address of the web UI and management API.
+# Default: ":20000"
+api-addr = ':20000'
+
+# Maximum number of captured sessions to keep. The oldest sessions are
+# reaped once this limit is exceeded. Bookmarked sessions are never removed.
+# Default: 10000 (100 when in-memory is true)
+max-sessions-retain = 10000
+
+# -----------------------------------------------------------------------------
+# Proxies
+#
+# Each [[proxies]] entry starts one reverse proxy listener: traffic arriving
+# on `listen` is forwarded to `target`, and every request/response pair is
+# captured for the web UI. Add as many entries as you need.
+# -----------------------------------------------------------------------------
+
+[[proxies]]
+# Address and port ihpp listens on (":20003" listens on all interfaces).
+listen = ':20003'
+# Upstream URL that captured traffic is forwarded to.
+target = 'http://localhost:8080'
+# Truncate large request/response bodies in the captured log.
+truncate-log-body = true

@@ -1,6 +1,14 @@
 # CLI Reference
 
-`ihpp` can be customized using several command-line flags and environment variables.
+`ihpp` can be customized using command-line flags, subcommands and environment variables.
+
+Run `ihpp help` for a summary, or `ihpp help <command>` for the details of a single command.
+
+```text
+Usage:
+  ihpp [options] [proxy ...]
+  ihpp <command> [command options]
+```
 
 ## Command-Line Flags
 
@@ -32,12 +40,48 @@ If a file path is provided, `ihpp` implements automatic log rotation:
 - **Max Age**: 28 days.
 - **Default**: `null` (or `console` in development)
 
+### `--help`, `-h`
+Print the help message and exit.
+
 ### `--version`
-Print version information and exit.
+Print version information and exit. Equivalent to `ihpp version`.
 
 ## Subcommands
 
-When `ihpp` is running (especially in daemon mode), you can use subcommands to interact with the running instance.
+### `ihpp config`
+Generates a fully commented sample configuration file (`.proxy.config.toml`) in the current folder.
+
+| Option | Description |
+| :--- | :--- |
+| `--config <path>` | Write the file to another path (also used by `--upgrade`). |
+| `--force` | Overwrite the file if it already exists. |
+| `--dry-run` | Print the generated file to stdout instead of writing it. |
+
+### `ihpp config --upgrade`
+Upgrades an existing configuration file to the format version supported by this build of `ihpp`, in place:
+
+- every configured value is preserved,
+- keys that are no longer supported are dropped,
+- keys that `ihpp` does not know about are carried over unchanged,
+- settings that were not configured are added as commented-out defaults.
+
+If the file is already at the current format version the command does nothing. Use
+`--force` to regenerate the comments and `--dry-run` to preview the result:
+
+```bash
+# show what would change
+ihpp config --upgrade --dry-run
+
+# migrate in place
+ihpp config --upgrade
+```
+
+The current format version is stored in the `config-version` key of the file. `ihpp`
+prints a warning at startup when the file it loaded is outdated.
+
+### `ihpp version`
+Prints the `ihpp` version and Go build information (Go version, platform and, for
+release builds, the commit and build time).
 
 ### `ihpp stop`
 Sends a shutdown signal to the running daemon via the Unix socket.
@@ -49,6 +93,9 @@ Retrieves and displays the status of the running daemon, including:
 - Database path
 - Management API address
 - List of active/inactive proxies
+
+### `ihpp help [command]`
+Shows the general help, or the help of a single command.
 
 ## Environment Variables
 

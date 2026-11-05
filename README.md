@@ -76,20 +76,33 @@ This script will concurrently run the Go backend and the Next.js frontend, allow
 
 ## 📖 Usage
 
+Run `ihpp help` to see every option, or `ihpp help <command>` for details about
+one command.
+
 ### CLI Flags
 
+-   `--config <path>`: Path to a `.toml` configuration file (default: `./.proxy.config.toml`).
 -   `--daemon`, `-d`: Run in background as a daemon.
 -   `--db-path <path>`: Path to the SQLite database file (default: `~/.ihpp/proxy_logs.db`).
 -   `--in-memory`: Use an in-memory database (no persistence, best for one-time usage).
 -   `--log-level <level>`: Set log level (`debug`, `info`, `warn`, `error`, `fatal`, `panic`, `disabled`).
 -   `--log-dest <dest>`: Log destination: `console`, `null`, or a file path. File-based logging includes automatic rotation.
--   `--config <path>`: Path to a `.toml` configuration file.
+-   `--help`, `-h`: Show the help message and exit.
+-   `--version`: Print version information and exit.
 
 ### Subcommands
 
-When running as a daemon or interacting with one:
+-   `ihpp config`: Generate a fully commented `./.proxy.config.toml` in the current folder.
+    -   `--config <path>`: Write to another path.
+    -   `--force`: Overwrite an existing file.
+    -   `--dry-run`: Print the sample config without writing it.
+-   `ihpp config --upgrade`: Upgrade the config file in the current folder to the latest format.
+    Every configured value is preserved, unknown keys are kept as-is, and new
+    settings are added as commented defaults. Add `--dry-run` to preview the result.
+-   `ihpp version`: Print the version plus Go build information.
 -   `ihpp stop`: Stop the running daemon gracefully.
 -   `ihpp status`: Show the status of the running daemon (uptime, proxies, etc.).
+-   `ihpp help [command]`: Show help for `ihpp` or for a single command.
 
 ### Common Scenarios
 
@@ -114,29 +127,18 @@ ihpp :3001,http://localhost:8081 :3002,http://localhost:8082
 ```
 This manages two proxies simultaneously through a single dashboard at `:20000`.
 
-#### 3. Persistent Configuration via File
-For complex or repetitive setups, use a TOML configuration file.
+#### 4. Persistent Configuration via File
+Generate a commented config file in the current folder and adjust it to your needs:
 ```bash
-ihpp --config my_proxies.toml
+ihpp config
+ihpp --config .proxy.config.toml
 ```
 
-Example `my_proxies.toml`:
-```toml
-[server]
-api-addr = ":20000"
-db-path = "./my_logs.db"
-
-[[proxies]]
-name = "Auth Service"
-listen = ":8001"
-target = "http://localhost:5001"
-
-[[proxies]]
-name = "Payment Service"
-listen = ":8002"
-target = "http://localhost:5002"
+After upgrading `ihpp`, migrate your config file to the latest format without
+losing any configured value:
+```bash
+ihpp config --upgrade
 ```
-
 ### Proxy Specification Format
 
 Specify one or more proxies as positional arguments:

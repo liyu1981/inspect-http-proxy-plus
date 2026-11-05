@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -20,7 +23,8 @@ import (
 
 func initFlags() {
 	// Use pflag (POSIX compliant) for seamless Viper integration
-	pflag.Bool("version", false, "Print version information")
+	pflag.BoolP("help", "h", false, "Show this help message and exit")
+	pflag.Bool("version", false, "Print version information and exit")
 	pflag.String("config", "", "Path to config file (default is ./.proxy.config.toml)")
 	pflag.String("db-path", "", "Path to database file")
 	pflag.Bool("in-memory", false, "Use in-memory database (no persistence)")
@@ -28,21 +32,244 @@ func initFlags() {
 	pflag.String("log-dest", "", "Log destination: 'console', 'null', or a file path (default 'null', or 'console' in dev)")
 	pflag.BoolP("daemon", "d", false, "Run in background as a daemon")
 
-	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Inspect HTTP Proxy Plus - A simple proxy to inspect and log HTTP requests.\n\n")
-		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] [command] [proxy1] [proxy2] ...\n\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "Options:\n")
-		pflag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nCommands:\n")
-		fmt.Fprintf(os.Stderr, "  stop      Stop the running daemon\n")
-		fmt.Fprintf(os.Stderr, "  status    Show the status of the running daemon\n")
-		fmt.Fprintf(os.Stderr, "\nProxy Format:\n")
-		fmt.Fprintf(os.Stderr, "  target\n")
-		fmt.Fprintf(os.Stderr, "  listen_port,target[,truncate]\n")
-		fmt.Fprintf(os.Stderr, "  Example: :3000,http://localhost:8000,true\n")
-		fmt.Fprintf(os.Stderr, "  Example: http://localhost:8000\n")
-		fmt.Fprintf(os.Stderr, "  Multiple proxies: http://localhost:8000 http://localhost:8001\n")
+	// Options of the `config` command, hidden from the main help output.
+	pflag.Bool("upgrade", false, "Upgrade an existing config file to the latest format")
+	pflag.Bool("force", false, "Overwrite the config file when generating a sample")
+	pflag.Bool("dry-run", false, "Print the result instead of writing the config file")
+	for _, name := range []string{"upgrade", "force", "dry-run"} {
+		_ = pflag.CommandLine.MarkHidden(name)
 	}
+
+	pflag.Usage = func() {
+		printHelp(os.Stderr)
+	}
+}
+
+// printHelp prints the top-level help message.
+func printHelp(w io.Writer) {
+	fmt.Fprint(w, `Inspect HTTP Proxy Plus (ihpp) - a reverse proxy that captures and inspects
+HTTP traffic, with a real-time web UI.
+
+Usage:
+  ihpp [options] [proxy ...]
+  ihpp <command> [command options]
+
+Commands:
+  config [options]   Generate a sample config file, or upgrade an existing one
+  version            Print version information
+  status             Show the status of a running daemon
+  stop               Stop a running daemon
+  help [command]     Show help for a command
+
+Options:
+`)
+	fmt.Fprint(w, pflag.CommandLine.FlagUsages())
+	fmt.Fprint(w, `
+Proxy Arguments:
+  target                             Listen on :20003 and forward to target
+  listen_port,target[,truncate]      Listen on listen_port, forward to target
+
+  Examples:
+    ihpp :3000,http://localhost:8000,true
+    ihpp http://localhost:8000
+    ihpp http://localhost:8000 http://localhost:8001
+
+Run 'ihpp help <command>' for more information on a command.
+`)
+}
+
+// printCommandHelp prints the help message of a single command.
+func printCommandHelp(w io.Writer, command string) {
+	switch command {
+	case "config":
+		fmt.Fprint(w, `Generate a sample configuration file in the current directory, or upgrade an
+existing configuration file to the latest format.
+
+Usage:
+  ihpp config [options]              Write ./.proxy.config.toml
+  ihpp config --upgrade [options]    Upgrade the existing config file in place
+
+Upgrading keeps every value that is already configured, drops keys that are no
+longer supported, and carries unknown keys over unchanged. Missing settings are
+added as commented-out defaults.
+
+Options:
+`)
+		fmt.Fprint(w, flagUsages("config", "upgrade", "force", "dry-run"))
+		fmt.Fprint(w, `
+Examples:
+  ihpp config                        Create ./.proxy.config.toml
+  ihpp config --force                Overwrite an existing config file
+  ihpp config --dry-run              Print the sample config without writing it
+  ihpp config --upgrade              Migrate the config file in place
+  ihpp config --upgrade --dry-run    Show the migrated config without writing it
+`)
+	case "version":
+		fmt.Fprint(w, `Print the ihpp version together with Go build information.
+
+Usage:
+  ihpp version
+  ihpp --version
+`)
+	case "status":
+		fmt.Fprint(w, `Show the status of the running daemon, including PID, uptime, database path,
+management API address and the active/inactive proxies.
+
+Usage:
+  ihpp status
+`)
+	case "stop":
+		fmt.Fprint(w, `Ask the running daemon to shut down gracefully.
+
+Usage:
+  ihpp stop
+`)
+	case "help", "":
+		printHelp(w)
+	default:
+		fmt.Fprintf(w, "Unknown command %q.\n\n", command)
+		printHelp(w)
+	}
+}
+
+// flagUsages renders the usage of the named flags.
+func flagUsages(names ...string) string {
+	set := pflag.NewFlagSet("ihpp", pflag.ContinueOnError)
+	for _, name := range names {
+		flag := pflag.Lookup(name)
+		if flag == nil {
+			continue
+		}
+		// Copy the flag so that hidden command options can be shown here
+		// without changing the global flag definitions.
+		copy := *flag
+		copy.Hidden = false
+		set.AddFlag(&copy)
+	}
+	return set.FlagUsages()
+}
+
+// printVersion prints version and build information.
+func printVersion() {
+	fmt.Printf("Inspect HTTP Proxy Plus version %s\n", core.Version)
+
+	goVersion := runtime.Version()
+	var revision, buildTime string
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if info.GoVersion != "" {
+			goVersion = info.GoVersion
+		}
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				revision = setting.Value
+			case "vcs.time":
+				buildTime = setting.Value
+			}
+		}
+	}
+
+	fmt.Printf("  go version: %s\n", goVersion)
+	fmt.Printf("  platform:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	if revision != "" {
+		if len(revision) > 12 {
+			revision = revision[:12]
+		}
+		fmt.Printf("  commit:     %s\n", revision)
+	}
+	if buildTime != "" {
+		fmt.Printf("  built:      %s\n", buildTime)
+	}
+}
+
+// handleConfigCommand implements `ihpp config [--upgrade] [--force] [--dry-run]`.
+func handleConfigCommand() {
+	upgrade, _ := pflag.CommandLine.GetBool("upgrade")
+	force, _ := pflag.CommandLine.GetBool("force")
+	dryRun, _ := pflag.CommandLine.GetBool("dry-run")
+
+	path, _ := pflag.CommandLine.GetString("config")
+	if path == "" {
+		path = os.Getenv("IHPP_CONFIG")
+	}
+	if path == "" {
+		path = config.DefaultConfigFileName
+	}
+
+	if pflag.NArg() > 1 {
+		fmt.Fprintf(os.Stderr, "Error: unexpected argument %q\n", pflag.Arg(1))
+		fmt.Fprintf(os.Stderr, "Run 'ihpp help config' for usage.\n")
+		os.Exit(1)
+	}
+
+	if !upgrade {
+		if dryRun {
+			fmt.Print(config.SampleConfig())
+			return
+		}
+
+		if err := config.WriteSampleConfig(path, force); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("%sCreated sample config:%s %s\n", core.ColorGreen, core.ColorReset, path)
+		fmt.Printf("Edit it, then start ihpp with: ihpp --config %s\n", path)
+		return
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: no config file found at %s\n", path)
+		fmt.Fprintf(os.Stderr, "Create one first with: ihpp config\n")
+		os.Exit(1)
+	}
+
+	result, err := config.UpgradeConfig(path, config.UpgradeOptions{DryRun: dryRun, Force: force})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if dryRun {
+		fmt.Print(result.Content)
+		fmt.Fprintf(os.Stderr, "\nDry run: %s was not modified.\n", path)
+		return
+	}
+
+	if result.UpToDate {
+		fmt.Printf("%sConfig file is already up to date%s (format version %d): %s\n",
+			core.ColorGreen, core.ColorReset, result.ToVersion, result.Path)
+		fmt.Printf("Use --force to regenerate the comments of the file.\n")
+		return
+	}
+
+	if !result.Changed {
+		fmt.Printf("%sConfig file already matches format version %d%s: %s\n",
+			core.ColorGreen, result.ToVersion, core.ColorReset, result.Path)
+		return
+	}
+
+	if result.FromVersion == result.ToVersion {
+		fmt.Printf("%sRewrote config:%s %s (format version %d)\n",
+			core.ColorGreen, core.ColorReset, result.Path, result.ToVersion)
+	} else {
+		fmt.Printf("%sUpgraded config:%s %s (format version %d -> %d)\n",
+			core.ColorGreen, core.ColorReset, result.Path, result.FromVersion, result.ToVersion)
+	}
+
+	if len(result.KeptValues) > 0 {
+		fmt.Printf("  preserved values: %s\n", strings.Join(result.KeptValues, ", "))
+	}
+	if len(result.AddedKeys) > 0 {
+		fmt.Printf("  unset settings:   %s (added as commented defaults)\n", strings.Join(result.AddedKeys, ", "))
+	}
+	if len(result.PreservedKeys) > 0 {
+		fmt.Printf("  unknown settings: %s (kept as-is)\n", strings.Join(result.PreservedKeys, ", "))
+	}
+	if len(result.RemovedKeys) > 0 {
+		fmt.Printf("  removed settings: %s\n", strings.Join(result.RemovedKeys, ", "))
+	}
+	fmt.Printf("  proxies:          %d\n", result.ProxyCount)
 }
 
 func handleSubcommands() bool {
@@ -52,6 +279,20 @@ func handleSubcommands() bool {
 
 	cmd := pflag.Arg(0)
 	switch cmd {
+	case "help":
+		printCommandHelp(os.Stdout, pflag.Arg(1))
+		return true
+	case "version":
+		if pflag.NArg() > 1 {
+			fmt.Fprintf(os.Stderr, "Error: unexpected argument %q\n", pflag.Arg(1))
+			fmt.Fprintf(os.Stderr, "Run 'ihpp help version' for usage.\n")
+			os.Exit(1)
+		}
+		printVersion()
+		return true
+	case "config":
+		handleConfigCommand()
+		return true
 	case "stop":
 		resp, err := core.SendDaemonCommand(core.DaemonCommand{Command: core.DaemonCommandStop})
 		if err != nil {
@@ -111,8 +352,18 @@ func main() {
 	initFlags()
 	pflag.Parse()
 
+	if help, _ := pflag.CommandLine.GetBool("help"); help {
+		// `ihpp help <command>` when flags are provided as well.
+		if pflag.NArg() > 0 {
+			printCommandHelp(os.Stdout, pflag.Arg(0))
+			return
+		}
+		printHelp(os.Stdout)
+		return
+	}
+
 	if ver, _ := pflag.CommandLine.GetBool("version"); ver {
-		fmt.Printf("Inspect HTTP Proxy Plus version %s\n", core.Version)
+		printVersion()
 		return
 	}
 
@@ -149,6 +400,7 @@ func main() {
 			entry, err := parseProxyFlag(proxyStr, i)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "FATAL: Failed to parse proxy argument '%s': %v\n", proxyStr, err)
+				fmt.Fprintf(os.Stderr, "Run 'ihpp help' for usage.\n")
 				log.Fatal().Err(err).Str("proxy", proxyStr).Msg("Failed to parse proxy argument")
 			}
 			sysConfig.Proxies = append(sysConfig.Proxies, entry)
